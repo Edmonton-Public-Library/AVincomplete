@@ -40,6 +40,10 @@
   } else {
     echo "<p class='current_branch'>branch set to: <b>" . $_COOKIE['branch_name'] . "</b>. If this is incorrect delete the related cookie.</p>";
     $branch = $_COOKIE['branch_name'];
+    echo "<form action='item_data.php' method='GET'>";
+    echo '<input type="text" name="itemId">';
+    echo '<div id="submit_itemId"><input type="submit" value="Go"></div>';
+    echo "</form>";
   }
   
 ?>

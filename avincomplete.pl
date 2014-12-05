@@ -116,15 +116,18 @@ sub init
 		$SQL = <<"END_SQL";
 CREATE TABLE avincomplete (
 	ItemId INTEGER PRIMARY KEY NOT NULL,
-	Date DATE,
-	Complete INTEGER,
-	Branch CHAR(3) NOT NULL,
+	Title CHAR(256),
+	CreateDate DATE DEFAULT CURRENT_DATE,
 	UserKey INTEGER,
-	HomeBranch CHAR(3),
-	CallNum CHAR(20),
-	Contacted DATE,
-	Comments CHAR(100)
-	);
+	Contact INTEGER DEFAULT 0,
+	ContactDate DATE DEFAULT NULL,
+	Complete INTEGER DEFAULT 0,
+	CompleteDate DATE DEFAULT NULL,
+	Discard  INTEGER DEFAULT 0,
+	DiscardDate DATE DEFAULT NULL,
+	Location CHAR(6) NOT NULL,
+	Comments CHAR(256)
+);
 END_SQL
 		$DBH->do($SQL);
 		$DBH->disconnect;
@@ -156,16 +159,16 @@ sub insert( $ )
 {
 	my $line = shift;
 	
-	my ($holdKey, $title, $date, $userKey, $userId, $userProfile) = split '\|', $line;
+	my ($ItemId, $Title, $CreateDate, $UserKey, $Contact, $ContactDate, $Complete, $CompleteDate, $Discard, $DiscardDate, $Location, $Comments) = @_;
 	$SQL = <<"END_SQL";
 INSERT OR REPLACE INTO holds 
-(ItemId, Date, Complete, Branch, UserKey, HomeBranch, CallNum, Contacted, Comments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+(ItemId, Title, CreateDate, UserKey, Contact, ContactDate, Complete, CompleteDate, Discard, DiscardDate, Location, Comments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 END_SQL
-	$DBH->do($SQL, undef, $holdKey, $title, $date, $userKey, $userId, $userProfile);
+	$DBH->do($SQL, undef, $ItemId, $Title, $CreateDate, $UserKey, $Contact, $ContactDate, $Complete, $CompleteDate, $Discard, $DiscardDate, $Location, $Comments);
 	return;
 }
 
-# grab all the NCIP log data since we don't know when the logs are rotated from log => log1, it's done by file size (10000 kB).
+# grab all the Data from the ILS.
 my $API_OUT = `ssh sirsi\@eplapp.library.ualberta.ca 'perl /s/sirsi/Unicorn/Bincustom/ncipstats.pl -a | seluser -iB -oSUBp'`;
 my @data = split '\n', $API_OUT;
 while (@data)
