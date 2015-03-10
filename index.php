@@ -3,49 +3,56 @@
 <title>AV Incomplete</title>
 <?php 
 	ini_set('error_reporting', E_ALL);
-	require 'db_func.php.inc';
 	// phpinfo();
-	echo "<title>AV Incomplete</title>";
 ?>
-<link rel="stylesheet" type="text/css" href="css/stats.css">
+<script src='http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js'></script>
+<style>
+body {
+  font: 13px/1.3 'Lucida Grande',sans-serif;
+  color: #666;
+}
+.go_button{
+	height: 75px;
+	width: 75px;
+}
+
+</style>
 </head>
 <body>
-<?php
-  $branch = "";
-  if (! isset($_COOKIE['branch_name'])){
-    echo "<h2>Select your branch</h2>";
-  	echo "<form action='form_data.php' method='POST'>";
-    echo "<select name='branch_name'>";
-    echo "<option value='MNA'>MNA</option>";
-    echo "<option value='MLW'>MLW</option>";
-    echo "<option value='WMC'>WMC</option>";
-    echo "<option value='LHL'>LHL</option>";
-    echo "<option value='LON'>LON</option>";
-    echo "<option value='JPL'>JPL</option>";
-    echo "<option value='HIG'>HIG</option>";
-    echo "<option value='WOO'>WOO</option>";
-    echo "<option value='STR'>STR</option>";
-    echo "<option value='CLV'>CLV</option>";
-    echo "<option value='MEA'>MEA</option>";
-    echo "<option value='CAL'>CAL</option>";
-    echo "<option value='CSD'>CSD</option>";
-    echo "<option value='IDY'>IDY</option>";
-    // echo "<option value='LES'>LES</option>"; // Lewis estates when available.
-    echo "<option value='RIV'>RIV</option>";
-    echo "<option value='SPW'>SPW</option>";
-    echo "<option value='CPL'>CPL</option>";   
-    echo "</select>";
-    echo "<div><input type='submit' value='submit'></div>";
-    echo "</form>";
-  } else {
-    echo "<p class='current_branch'>branch set to: <b>" . $_COOKIE['branch_name'] . "</b>. If this is incorrect delete the related cookie.</p>";
-    $branch = $_COOKIE['branch_name'];
-    echo "<form action='item_data.php' method='GET'>";
-    echo '<input type="text" name="itemId">';
-    echo '<div id="submit_itemId"><input type="submit" value="Go"></div>';
-    echo "</form>";
-  }
-  
-?>
+	<div class='branch_selection'>
+	<div class='prompt'></div>
+	<form action='data.php' method='POST'>
+		<br>branch:<br>
+		<select name='branch'>
+		<?php if (isset($_COOKIE['branch_name'])){
+			$branch = $_COOKIE['branch_name'];
+			echo "<option selected='$branch'>$branch</option>";
+		} ?>
+		<option value='MNA'>MNA</option>
+		<option value='MLW'>MLW</option>
+		<option value='WMC'>WMC</option>
+		<option value='LHL'>LHL</option>
+		<option value='LON'>LON</option>
+		<option value='JPL'>JPL</option>
+		<option value='HIG'>HIG</option>
+		<option value='WOO'>WOO</option>
+		<option value='STR'>STR</option>
+		<option value='CLV'>CLV</option>
+		<option value='MEA'>MEA</option>
+		<option value='CAL'>CAL</option>
+		<option value='CSD'>CSD</option>
+		<option value='IDY'>IDY</option>
+		<!-- <option value='LES'>LES</option> // Lewis estates when available. -->
+		<option value='RIV'>RIV</option>
+		<option value='SPW'>SPW</option>
+		<option value='CPL'>CPL</option>
+		<option value='ALL'>ALL</option>
+		</select>
+		<br>Item ID:<br>
+		<input type="text" name="item_id">
+		<!-- add the text field for optional barcode input. Submit will handle both functions. -->
+		<div><input class='go_button' type="image" src="images/go.png" alt="Submit"></div>
+	</form>
+</div>
 </body>
 </html>
