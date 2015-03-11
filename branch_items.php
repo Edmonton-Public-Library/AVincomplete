@@ -105,18 +105,19 @@ if (empty($_GET['branch']) || $_GET['branch'] == 'ALL'){
 // Location CHAR(6) NOT NULL,
 // Comments CHAR(256)
 $ret = $db->query($sql);
+$ran = 0;
 while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
-	$dateCreated   = $row['CreateDate'];
 	$itemId        = $row['ItemId'];
+	$dateCreated   = $row['CreateDate'];
+	// replace the spaces because they break the sorting.
 	$title         = preg_replace("/\s+/", "_", $row['Title']);
 	echo "  <div class='rowGroup' date_create='$dateCreated' item_id='$itemId' title='$title'>";
-	//echo "  <div class='rowGroup'>";
 	echo "    <div class='row'>";
 	echo "      <div class='cell'>" . $row['ItemId'] . "</div>";
 	echo "      <div class='cell'>" . $row['Title'] . "</div>";
 	echo "      <div class='cell'>" . $row['Location'] . "</div>";
 	echo "      <div class='cell'>" . convertANSIDate($row['CreateDate']) . "</div>";
-// Here we have to put in checkboxes, or graphics that we can link to other actions.
+// TODO Here we have to put in checkboxes, or graphics that we can link to other actions with ajax.
 	echo "      <div class='cell'>data</div>";
 	echo "      <div class='cell'>data</div>";
 	echo "      <div class='cell'>data</div>";
@@ -124,9 +125,16 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	echo "      <div class='cell'>" . getContact() . "</div>"; // Form for the remove operation.
 	echo "    </div>";
 	echo "  </div>";
+	$ran++;
 }
 $db->close();
-
+if ($ran == 0){
+	echo "  <div class='rowGroup'>";
+	echo "    <div class='row'>";
+	echo "      <div class='cell'>Move along, nothing to see here.</div>";
+	echo "    </div>";
+	echo "  </div>";
+}
 // function setDiscarded(){
 	// $sql = "UPDATE avincomplete SET Discard=1 WHERE ItemId=" . $_GET['itemId'];
 	// $db->query($sql);
@@ -233,6 +241,7 @@ function sortIt(myArray, which){
 		}
 	});
 }
+
 </script>
 </body>
 </html>

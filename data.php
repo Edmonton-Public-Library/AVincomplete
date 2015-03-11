@@ -17,7 +17,9 @@ $itemId = '';
 if (! empty($_GET)) {
  	if (! empty($_GET['branch'])){
 		$branch = $_GET['branch'];
-		setcookie('branch',$_GET['branch']);
+		if ($branch != 'ALL'){ // don't set the branch to all if choosen, it isn't a valid location if we have to create items.
+			setcookie('branch',$_GET['branch']);
+		}
 		echo "<h3>branch set to '$branch'</h3>";
 	}
 	if (! empty($_GET['item_id'])){
@@ -25,8 +27,13 @@ if (! empty($_GET)) {
 		echo "<h3>$itemId</h3>";
 		if (preg_match("/\d{14}/", $itemId)){
 			echo "<p>looks like a good one.</p>";
+			if (strcmp($branch, 'ALL') == 0){ // don't set the branch to all if choosen, it isn't a valid location if we have to create items.
+				$msg = "ALL is not a valid branch location. Click back and select the item's current location branch.";
+				header("Location:error.php?msg=$msg");
+			}
+			echo "<p>branch is set to '$branch'</p>";
 			// redirect to page to show item with routing if exists and if not get information about item and enter in database.
-			// header("Location:search_create_item.php");
+			header("Location:search_create_item.php?item_id=$itemId&branch=$branch");
 		} else {
 			$msg = "Invalid bar code '$itemId' isn't 14 digits.";
 			header("Location:error.php?msg=$msg");

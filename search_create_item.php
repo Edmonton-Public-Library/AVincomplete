@@ -3,7 +3,9 @@
 <title>AV Incomplete</title>
 <?php 
 	ini_set('error_reporting', E_ALL);
+	require 'db.inc';
 	// phpinfo();
+	// This page shows an item if one exists on record, and if not allows you to create it in the database.
 ?>
 <script src='http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js'></script>
 <style>
@@ -14,6 +16,36 @@ body {
 </style>
 </head>
 <body>
+<div id='results'></div>
+<?php
+# Get the count of items in the database.
+// $sql = "SELECT count(*) as count FROM avincomplete";// WHERE ItemId=" . $_GET['item_id'];
+$sql = "SELECT count(*) as count FROM avincomplete WHERE ItemId=" . $_GET['item_id'];
 
+// TABLE avincomplete 
+// ItemId INTEGER PRIMARY KEY NOT NULL,
+// Title CHAR(256),
+// CreateDate DATE DEFAULT CURRENT_DATE,
+// UserKey INTEGER,
+// Contact INTEGER DEFAULT 0,
+// ContactDate DATE DEFAULT NULL,
+// Complete INTEGER DEFAULT 0,
+// CompleteDate DATE DEFAULT NULL,
+// Discard  INTEGER DEFAULT 0,
+// DiscardDate DATE DEFAULT NULL,
+// Location CHAR(6) NOT NULL,
+// Comments CHAR(256)
+$ret = $db->query($sql);
+while ($row = $ret->fetchArray(SQLITE3_ASSOC)){
+	echo "<p>".$row['count']."</p>";
+} 
+if (! defined($row['count'])){
+	echo "<p>nothing</p>";
+}
+$db->close();
+?>
+<script>
+
+</script>
 </body>
 </html>
