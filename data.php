@@ -14,25 +14,31 @@ ini_set('error_reporting', E_ALL);
 // require 'db.inc';
 $branch = '';
 $itemId = '';
-if (! empty($_POST)) {
- 	if (! empty($_POST['branch'])){
-		$branch = $_POST['branch'];
-		setcookie('branch',$_POST['branch']);
+if (! empty($_GET)) {
+ 	if (! empty($_GET['branch'])){
+		$branch = $_GET['branch'];
+		setcookie('branch',$_GET['branch']);
 		echo "<h3>branch set to '$branch'</h3>";
 	}
-	if (! empty($_POST['item_id'])){
-		$itemId = $_POST['item_id'];
+	if (! empty($_GET['item_id'])){
+		$itemId = trim($_GET['item_id']);
 		echo "<h3>$itemId</h3>";
-		// redirect to page to show item with routing if exists and if not get information about item and enter in database.
-		// header("Location:search_create_item.php");
+		if (preg_match("/\d{14}/", $itemId)){
+			echo "<p>looks like a good one.</p>";
+			// redirect to page to show item with routing if exists and if not get information about item and enter in database.
+			// header("Location:search_create_item.php");
+		} else {
+			$msg = "Invalid bar code '$itemId' isn't 14 digits.";
+			header("Location:error.php?msg=$msg");
+		}		
 	} else { # None empty item id
 		echo "<h3>itemId not set.</h3>";
 		// redirect to page to show branch items.
 		header("Location:branch_items.php?branch=$branch");
 	}
 } else {
-	$msg = htmlentities('neither the branch nor the item id were set in page data.php');
-	header("Location:error.html?msg=$msg");
+	$msg = htmlentities('No branch or barcode submitted in page data.php');
+	header("Location:error.php?msg=$msg");
 }
 // $sql = "";
 // if (empty($_GET['item_id'])){

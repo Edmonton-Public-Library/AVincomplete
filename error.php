@@ -1,7 +1,6 @@
-<html><head><title>AV Incomplete</title>
+<html><head><title>AV Incomplete error</title>
 <style>
 .error{
-	color: red;
 	margin-left: 100px;
     margin-right: auto;
 }
@@ -21,7 +20,14 @@ if (! empty($_GET['msg'])){
 }
 echo "<div class='error'>Oh oh " . html_entity_decode($message) . "</div>";
 ?>
-<p class='mail'>
-<?php echo "<a href='mailto:itshelp@epl.ca?Subject=AV%20incomplete%20Error%20" . htmlentities($message) . "' target='_top'>If you get stuck...</a>"; ?>
+<p>
+<?php 
+echo "<a class='error' href='mailto:itshelp@epl.ca?Subject=AV%20incomplete%20Error%20" . htmlentities($message) . "' target='_top'>If you get stuck...</a>";
+
+?>
+<form action='index.php' method='GET'>
+	<div><input class='error' type='submit' src='images/go.png' value='Start over'></div>
+</form> 
 </p>
+
 </body></html>

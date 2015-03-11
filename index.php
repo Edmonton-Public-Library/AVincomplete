@@ -21,7 +21,7 @@ body {
 <body>
 	<div class='branch_selection'>
 	<div class='prompt'></div>
-	<form action='data.php' method='POST'>
+	<form action='data.php' method='GET'>
 		<br>branch:<br>
 		<select name='branch'>
 		<?php if (isset($_COOKIE['branch_name'])){
@@ -49,10 +49,18 @@ body {
 		<option value='ALL'>ALL</option>
 		</select>
 		<br>Item ID:<br>
-		<input type="text" name="item_id">
+		<input id='barcode' type="text" name='item_id' maxlength='14' size='14'>
 		<!-- add the text field for optional barcode input. Submit will handle both functions. -->
-		<div><input class='go_button' type="image" src="images/go.png" alt="Submit"></div>
+		<div><input class='go_button' type='image' src='images/go.png' alt='Submit'></div>
 	</form>
-</div>
+	</div>
+<script>
+// Clears the input fields if you set focus on them.
+$(document).ready(function(){
+    $('input').on('click focusin', function() {
+		this.value = '';
+	});
+});
+</script>
 </body>
 </html>
