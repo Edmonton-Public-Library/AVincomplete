@@ -17,8 +17,10 @@ $itemId = '';
 if (! empty($_GET)) {
  	if (! empty($_GET['branch'])){
 		$branch = $_GET['branch'];
-		if ($branch != 'ALL'){ // don't set the branch to all if choosen, it isn't a valid location if we have to create items.
-			setcookie('branch',$_GET['branch']);
+		if (strcmp($branch,"ALL") == 0){ // don't set the branch to all if choosen, it isn't a valid location if we have to create items.
+			setcookie('branch','MNA');
+		} else {
+			setcookie('branch', $branch);
 		}
 		echo "<h3>branch set to '$branch'</h3>";
 	}

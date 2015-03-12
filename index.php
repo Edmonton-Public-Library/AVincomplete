@@ -24,8 +24,8 @@ body {
 	<form action='data.php' method='GET'>
 		<br>branch:<br>
 		<select name='branch'>
-		<?php if (isset($_COOKIE['branch_name'])){
-			$branch = $_COOKIE['branch_name'];
+		<?php if (isset($_COOKIE['branch'])){
+			$branch = $_COOKIE['branch'];
 			echo "<option selected='$branch'>$branch</option>";
 		} ?>
 		<option value='MNA'>MNA</option>
