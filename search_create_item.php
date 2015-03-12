@@ -45,11 +45,11 @@ $ret = $db->query($sql);
 while ($row = $ret->fetchArray(SQLITE3_ASSOC)){
 	if ($row['count'] == 0){
 		header("Location:new.php?item_id=$itemId&branch=$branch");
+	} else {
+		echo "<p>found it.</p>";
 	}
 } 
-if (! defined($row['count'])){
-	echo "<p>nothing</p>";
-}
+
 $db->close();
 ?>
 <script>

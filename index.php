@@ -1,10 +1,7 @@
 <html>
 <head>
 <title>AV Incomplete</title>
-<?php 
-	ini_set('error_reporting', E_ALL);
-	// phpinfo();
-?>
+
 <script src='http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js'></script>
 <style>
 body {
@@ -51,7 +48,7 @@ body {
 		<br>Item ID:<br>
 		<input id='barcode' type="text" name='item_id' maxlength='14' size='14'>
 		<!-- add the text field for optional barcode input. Submit will handle both functions. -->
-		<div><input class='go_button' type='image' src='images/go.png' alt='Submit'></div>
+		<div><input id='submit_barcode' class='go_button' type='image' src='images/go.png' alt='Submit'></div>
 	</form>
 	</div>
 <script>
@@ -59,6 +56,11 @@ body {
 $(document).ready(function(){
     $('input').on('click focusin', function() {
 		this.value = '';
+	});
+	$("#submit_barcode").submit(function(e){
+		if (e.which === '\n\n\n'){
+			this.preventDefault();
+		}
 	});
 });
 </script>
