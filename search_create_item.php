@@ -21,7 +21,13 @@ body {
 # Get the count of items in the database.
 // $sql = "SELECT count(*) as count FROM avincomplete";// WHERE ItemId=" . $_GET['item_id'];
 $sql = "SELECT count(*) as count FROM avincomplete WHERE ItemId=" . $_GET['item_id'];
-
+$branch = '';
+if (isset($_GET['branch'])){
+	$branch = $_GET['branch'];
+} else {
+	$msg = "branch missing on create: search_create_item.php.";
+	header("Location:error.php?msg=$msg");
+}
 // TABLE avincomplete 
 // ItemId INTEGER PRIMARY KEY NOT NULL,
 // Title CHAR(256),
@@ -37,7 +43,9 @@ $sql = "SELECT count(*) as count FROM avincomplete WHERE ItemId=" . $_GET['item_
 // Comments CHAR(256)
 $ret = $db->query($sql);
 while ($row = $ret->fetchArray(SQLITE3_ASSOC)){
-	echo "<p>".$row['count']."</p>";
+	if ($row['count'] == 0){
+		header("Location:new.php?item_id=$itemId&branch=$branch");
+	}
 } 
 if (! defined($row['count'])){
 	echo "<p>nothing</p>";
