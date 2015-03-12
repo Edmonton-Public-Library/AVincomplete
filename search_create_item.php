@@ -1,23 +1,25 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<title>AV Incomplete</title>
-<?php 
-	ini_set('error_reporting', E_ALL);
-	require 'db.inc';
-	// phpinfo();
-	// This page shows an item if one exists on record, and if not allows you to create it in the database.
-?>
-<script src='http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js'></script>
-<style>
-body {
-  font: 13px/1.3 'Lucida Grande',sans-serif;
-  color: #666;
-}
-</style>
+  <title><?php if (! empty($_GET['branch'])){ echo $_GET['branch']; } ?> AV Incomplete</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 </head>
 <body>
-<div id='results'></div>
+<div class="container">
+  <div class="jumbotron">
+	<h1>AV Incomplete</h1>
+	<p>''The whole is greater than the sum of it's parts.'' - unknown</p>
+  </div>
+  <p>Item: <?php if (empty($_GET['item_id'])){ echo '??'; } else { echo $_GET['item_id']." "; } ?>
 <?php
+ini_set('error_reporting', E_ALL);
+require 'db.inc';
+// phpinfo();
+// This page shows an item if one exists on record, and if not allows you to create it in the database.
 # Get the count of items in the database.
 // $sql = "SELECT count(*) as count FROM avincomplete";// WHERE ItemId=" . $_GET['item_id'];
 $sql = "SELECT count(*) as count FROM avincomplete WHERE ItemId=" . $_GET['item_id'];
@@ -44,7 +46,8 @@ if (isset($_GET['branch'])){
 $ret = $db->query($sql);
 while ($row = $ret->fetchArray(SQLITE3_ASSOC)){
 	if ($row['count'] == 0){
-		header("Location:new.php?item_id=$itemId&branch=$branch");
+		echo " hasn't been reported as incomplete yet.</p><p><button type='button' class='btn btn-info btn-lg'>Report it now</button></p>";
+		//header("Location:new.php?item_id=$itemId&branch=$branch");
 	} else {
 		echo "<p>found it.</p>";
 	}
@@ -52,6 +55,7 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC)){
 
 $db->close();
 ?>
+</div>
 <script>
 
 </script>

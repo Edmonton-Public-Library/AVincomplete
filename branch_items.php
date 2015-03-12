@@ -23,10 +23,10 @@
 -->
 	<div id='original' class='table'>
 		<div class='header sticky row'>
-			<div class='col-sm-2 cell list-group-item active'>Item Barcode&nbsp;<a id='item_id' href='#' title='sort'><img src='images/sort.gif' /></a></div>
+			<div class='col-sm-2 cell list-group-item active'>Bar Code&nbsp;<a id='item_id' href='#' title='sort'><img src='images/sort.gif' /></a></div>
 			<div class='col-sm-2 cell list-group-item active'>Title&nbsp;<a id='title' href='#' title='sort'><img src='images/sort.gif' /></a></div>
 			<div class='col-sm-1 cell list-group-item active'>Location</div>
-			<div class='col-sm-2 cell list-group-item active'>Date<a id='date' href='#' title='sort'><img src='images/sort.gif' /></a></div>
+			<div class='col-sm-2 cell list-group-item active'>Date&nbsp;<a id='date' href='#' title='sort'><img src='images/sort.gif' /></a></div>
 			<div class='col-sm-1 cell list-group-item active'>Discard</div>
 			<div class='col-sm-1 cell list-group-item active'>Complete</div>
 			<div class='col-sm-1 cell list-group-item active'>Contact</div>
