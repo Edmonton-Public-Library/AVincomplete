@@ -66,7 +66,7 @@
 			<p/>
 			<p class="text-center">
 				ITS help?&nbsp;&nbsp;
-				<a class='error' href='mailto:itshelp@epl.ca?Subject=AV%20incomplete%20Error%20 
+				<a href='mailto:itshelp@epl.ca?Subject=AV%20incomplete%20Error%20 
 				<?php echo htmlentities($message); ?>' target='_top'>
 				<span class="glyphicon glyphicon-envelope"></span>
 				</a>
