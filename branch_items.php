@@ -5,18 +5,50 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href='css/style.css'>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
   <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 </head>
 <body>
-<div class="container">
-  <div class="jumbotron">
-	<h1>AV Incomplete</h1>
-	<p>''A fuller expression of Self comes from the journey for greater wholeness.'' - Kathryn V. White</p>
+<nav class="navbar navbar-inverse navbar-fixed-top">
+  <div class="container-fluid">
+	<div class="navbar-header">
+	  <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+		<span class="sr-only">Toggle navigation</span>
+		<span class="icon-bar"></span>
+		<span class="icon-bar"></span>
+		<span class="icon-bar"></span>
+	  </button>
+	  <a class="navbar-brand" href="index.php">EPL AV Incomplete</a>
+	</div>
+	<div id="navbar" class="navbar-collapse collapse">
+	  <ul class="nav navbar-nav navbar-right">
+		<li><a href="index.php">Register item</a></li>
+		<li><a href="#">Mark item complete</a></li>
+		<li><a href="#">Manage items</a></li>
+		<li><a href="#">Help</a></li>
+	  </ul>
+	  <form class="navbar-form navbar-right">
+		<input type="text" class="form-control" placeholder="Search...">
+	  </form>
+	</div>
   </div>
-  <p>Incomplete items at <?php if (empty($_GET['branch'])){ echo '??'; } else { echo $_GET['branch']; } ?></p>
-
-<!-- 
+</nav>
+<div class="container-fluid">
+	<div class="col-sm-12">
+     <h2 class="sub-header">Incomplete items at 
+	 <?php 
+		if (empty($_GET['branch'])){ 
+			echo '??';
+		} else {
+			if ($_GET['branch'] === 'ALL'){
+				echo "all branches";
+			} else {
+				echo $_GET['branch']." branch";
+			}
+		} 
+	?></h2>
+<!--
 <form action='index.php'>
 <input type='submit' value='back'>
 </form>
@@ -24,8 +56,7 @@
 	<div id='original' class='table'>
 		<div class='header sticky row'>
 			<div class='col-sm-2 cell list-group-item active'>Bar Code&nbsp;<a id='item_id' href='#' title='sort'><img src='images/sort.gif' /></a></div>
-			<div class='col-sm-2 cell list-group-item active'>Title&nbsp;<a id='title' href='#' title='sort'><img src='images/sort.gif' /></a></div>
-			<div class='col-sm-1 cell list-group-item active'>Location</div>
+			<div class='col-sm-3 cell list-group-item active'>Title&nbsp;<a id='title' href='#' title='sort'><img src='images/sort.gif' /></a></div>
 			<div class='col-sm-2 cell list-group-item active'>Date&nbsp;<a id='date' href='#' title='sort'><img src='images/sort.gif' /></a></div>
 			<div class='col-sm-1 cell list-group-item active'>Discard</div>
 			<div class='col-sm-1 cell list-group-item active'>Complete</div>
@@ -85,8 +116,7 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	$title         = preg_replace("/\s+/", "_", $row['Title']);
 	echo "  <div class='row rowGroup' date_create='$dateCreated' item_id='$itemId' title='$title'>";
 	echo "      <div class='col-sm-2 cell list-group-item'>" . $row['ItemId'] . "</div>";
-	echo "      <div class='col-sm-2 cell list-group-item'>" . $row['Title'] . "</div>";
-	echo "      <div class='col-sm-1 cell list-group-item'>" . $row['Location'] . "</div>";
+	echo "      <div class='col-sm-3 cell list-group-item'>" . $row['Title'] . "</div>";
 	echo "      <div class='col-sm-2 cell list-group-item'>" . convertANSIDate($row['CreateDate']) . "</div>";
 // TODO Here we have to put in checkboxes, or graphics that we can link to other actions with ajax.
 	echo "      <div class='col-sm-1 cell list-group-item'>data</div>";
@@ -111,7 +141,8 @@ if ($ran == 0){
 // }
 // $db->close();
 ?>
-	</div>
+			</div>
+		</div>
 	<div id='results' class='table'></div>
 </div>
 

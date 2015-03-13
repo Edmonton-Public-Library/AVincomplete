@@ -1,56 +1,53 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<title>AV Incomplete</title>
-
-<script src='http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js'></script>
-<style>
-body {
-  font: 13px/1.3 'Lucida Grande',sans-serif;
-  color: #666;
-}
-.go_button{
-	height: 75px;
-	width: 75px;
-}
-
-</style>
+  <title><?php if (! empty($_GET['branch'])){ echo $_GET['branch']; } ?> AV Incomplete</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href='css/style.css'>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 </head>
 <body>
-	<div class='branch_selection'>
-	<div class='prompt'></div>
-	<form action='data.php' method='GET'>
-		<br>branch:<br>
-		<select name='branch'>
-		<?php if (isset($_COOKIE['branch'])){
-			$branch = $_COOKIE['branch'];
-			echo "<option selected='$branch'>$branch</option>";
-		} ?>
-		<option value='MNA'>MNA</option>
-		<option value='MLW'>MLW</option>
-		<option value='WMC'>WMC</option>
-		<option value='LHL'>LHL</option>
-		<option value='LON'>LON</option>
-		<option value='JPL'>JPL</option>
-		<option value='HIG'>HIG</option>
-		<option value='WOO'>WOO</option>
-		<option value='STR'>STR</option>
-		<option value='CLV'>CLV</option>
-		<option value='MEA'>MEA</option>
-		<option value='CAL'>CAL</option>
-		<option value='CSD'>CSD</option>
-		<option value='IDY'>IDY</option>
-		<!-- <option value='LES'>LES</option> // Lewis estates when available. -->
-		<option value='RIV'>RIV</option>
-		<option value='SPW'>SPW</option>
-		<option value='CPL'>CPL</option>
-		<option value='ALL'>ALL</option>
+<div class="container">
+<div class="col-sm-6">
+	<form role='form' action='data.php' method='GET'>
+		<h2 class="form-signin-heading">Welcome to AV incomplete</h2>
+		<div class="form-group">
+		<label for="sel1">Select your branch:</label>
+		<select class="form-control" id="sel1" name='branch' required>
+			<?php if (isset($_COOKIE['branch'])){
+				$branch = $_COOKIE['branch'];
+				echo "<option selected='$branch'>$branch</option>";
+			} ?>
+			<option value='MNA'>MNA</option>
+			<option value='MLW'>MLW</option>
+			<option value='WMC'>WMC</option>
+			<option value='LHL'>LHL</option>
+			<option value='LON'>LON</option>
+			<option value='JPL'>JPL</option>
+			<option value='HIG'>HIG</option>
+			<option value='WOO'>WOO</option>
+			<option value='STR'>STR</option>
+			<option value='CLV'>CLV</option>
+			<option value='MEA'>MEA</option>
+			<option value='CAL'>CAL</option>
+			<option value='CSD'>CSD</option>
+			<option value='IDY'>IDY</option>
+			<!-- <option value='LES'>LES</option> // Lewis estates when available. -->
+			<option value='RIV'>RIV</option>
+			<option value='SPW'>SPW</option>
+			<option value='CPL'>CPL</option>
+			<option value='ALL'>ALL</option>
 		</select>
-		<br>Item ID:<br>
-		<input id='barcode' type="text" name='item_id' maxlength='14' size='14'>
-		<!-- add the text field for optional barcode input. Submit will handle both functions. -->
-		<div><input id='submit_barcode' class='go_button' type='image' src='images/go.png' alt='Submit'></div>
+		<br>
+		<label for="item_id" class="sr-only">Bar code</label>
+		<input id='barcode' type="text" name='item_id' maxlength='14' class="form-control" placeholder="Item bar code" autofocus>
+		<button class="btn btn-lg btn-primary btn-block" type="submit">Let's go!</button>
+		</div> <!-- form group -->
 	</form>
-	</div>
+</div> <!-- /container -->
 <script>
 // Clears the input fields if you set focus on them.
 $(document).ready(function(){
