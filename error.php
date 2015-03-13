@@ -23,8 +23,9 @@
 	</div>
 	<div id="navbar" class="navbar-collapse collapse">
 	  <ul class="nav navbar-nav navbar-right">
-		<li><a href="index.php">Register item</a></li>
-		<li><a href="help.php">Help</a></li>
+		<li><a href="index.php"><span class="glyphicon glyphicon-home"></span></a></li>
+		<li><a href="branch_items.php?branch=ALL"><span class="glyphicon glyphicon-wrench"></span></a></li>
+		<li><a href="help.php"><span class="glyphicon glyphicon-info-sign"></span></a></li>
 	  </ul>
 	  <form class="navbar-form navbar-right">
 		<input type="text" class="form-control" placeholder="Search...">
