@@ -1,33 +1,76 @@
-<html><head><title>AV Incomplete error</title>
-<style>
-.error{
-	margin-left: 100px;
-    margin-right: auto;
-}
-</style>
-<!-- <script src="js/jquery-2.1.1.min.js"></script> 
-<script TYPE="text/javascript">
-</script>-->
-</head><body>
-<img class='error' src='images/broken_robot.jpg'>
-
-<?php 
-ini_set('error_reporting', E_ALL);
-// phpinfo();
-$message = '';
-if (! empty($_GET['msg'])){
-	$message = $_GET['msg'];
-}
-echo "<div class='error'>Oh oh " . html_entity_decode($message) . "</div>";
-?>
-<p>
-<?php 
-echo "<a class='error' href='mailto:itshelp@epl.ca?Subject=AV%20incomplete%20Error%20" . htmlentities($message) . "' target='_top'>If you get stuck...</a>";
-
-?>
-<form action='index.php' method='GET'>
-	<div><input class='error' type='submit' src='images/go.png' value='Start over'></div>
-</form> 
-</p>
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title><?php if (! empty($_GET['branch'])){ echo $_GET['branch']; } ?> AV Incomplete</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href='css/style.css'>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+</head>
+<body>
+<nav class="navbar navbar-inverse navbar-fixed-top">
+  <div class="container-fluid">
+	<div class="navbar-header">
+	  <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+		<span class="sr-only">Toggle navigation</span>
+		<span class="icon-bar"></span>
+		<span class="icon-bar"></span>
+		<span class="icon-bar"></span>
+	  </button>
+	  <a class="navbar-brand" href="index.php">EPL AV Incomplete</a>
+	</div>
+	<div id="navbar" class="navbar-collapse collapse">
+	  <ul class="nav navbar-nav navbar-right">
+		<li><a href="index.php">Register item</a></li>
+		<li><a href="help.php">Help</a></li>
+	  </ul>
+	  <form class="navbar-form navbar-right">
+		<input type="text" class="form-control" placeholder="Search...">
+	  </form>
+	</div>
+  </div>
+</nav>
+<div class="container-fluid">
+	<div class="col-sm-7">
+	<h2 class="sub-header">Oops
+	<?php 
+		ini_set('error_reporting', E_ALL);
+		// phpinfo();
+		$message = '';
+		if (! empty($_GET['msg'])){
+			$message = $_GET['msg'];
+		}
+		echo  html_entity_decode($message);
+	?>
+	</h2>
+	<div class='row'>
+		<div class='col-md-2'>
+			<p/>
+		</div>
+		<div class='col-md-4'>
+			<img class="img-responsive" alt="Broken Robot" src='images/broken_robot.jpg'>
+			<p/>
+			<p/>
+			<p/>
+			<p>
+				<a href="index.php">
+					<button type="button" class="btn btn-info btn-block">
+						<span class="glyphicon glyphicon-home"></span>
+					</button>
+				</a> 
+			</p>
+			<p/>
+			<p/>
+			<p class="text-center">
+				ITS help?&nbsp;&nbsp;
+				<a class='error' href='mailto:itshelp@epl.ca?Subject=AV%20incomplete%20Error%20 
+				<?php echo htmlentities($message); ?>' target='_top'>
+				<span class="glyphicon glyphicon-envelope"></span>
+				</a>
+			</p>
+		</div>
+	</div> <!-- columns -->
+</div> <!-- container -->
 </body></html>
