@@ -82,7 +82,7 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC)){
 			if ($row['Location'] === $branch){
 				echo "I think the item should be here at <kbd>$branch</kbd>, check the AV shelf.";
 			} else {
-				echo "Transit to <kbd>$branch</kbd>, and collect a star.<span class='glyphicon glyphicon-star'></span>";
+				echo "Transit to <kbd>".$row['Location']."</kbd>, and collect a star.<span class='glyphicon glyphicon-star'></span>";
 			}
 		} else {
 			echo "I have this item registered, but the branch isn't specified, <br/>so I can't tell you where to send it. Do you want to ask around?";
