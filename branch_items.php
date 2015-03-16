@@ -86,10 +86,12 @@ function getContact(){
 }
 
 $sql = "";
+$branch = ''; // TODO fix because functions.php needs branch for create but that is not required here.
 if (empty($_GET['branch']) || $_GET['branch'] == 'ALL'){
 	# If the item field is empty show the entire database of materials.
 	$sql = "SELECT * FROM avincomplete ORDER BY CreateDate";
 } else {
+	$branch = $_GET['branch'];
 	# Show a specific branch items...
 	$sql = "SELECT * FROM avincomplete WHERE Location='" . $_GET['branch'] . "'";
 }
@@ -117,12 +119,14 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	echo "      <div class='col-sm-2 cell list-group-item'>" . $row['ItemId'] . "</div>";
 	echo "      <div class='col-sm-3 cell list-group-item'>" . $row['Title'] . "</div>";
 	echo "      <div class='col-sm-2 cell list-group-item'>" . convertANSIDate($row['CreateDate']) . "</div>";
-// TODO Here we have to put in checkboxes, or graphics that we can link to other actions with ajax.
-	echo "      <div class='col-sm-1 cell list-group-item'>data</div>";
-	echo "      <div class='col-sm-1 cell list-group-item'>data</div>";
-	echo "      <div class='col-sm-1 cell list-group-item'>data</div>";
-	echo "      <div class='col-sm-1 cell list-group-item'>data</div>";
-	echo "      <div class='col-sm-1 cell list-group-item'>" . getContact() . "</div>"; // Form for the remove operation.
+// TODO Fix so buttons are dynamically set to their values in the database.
+	echo "      <div class='col-sm-1 cell list-group-item'><a href='functions.php?action=discard&item_id=$itemId&branch=$branch'><button type='button' class='btn btn-info btn-xs'>Discard</button></a></div>";
+	echo "      <div class='col-sm-1 cell list-group-item'><a href='functions.php?action=complete&item_id=$itemId&branch=$branch'><button type='button' class='btn btn-info btn-xs'>Complete</button></a></div>";
+	echo "      <div class='col-sm-1 cell list-group-item'><a href='functions.php?action=contact&item_id=$itemId&branch=$branch'><button type='button' class='btn btn-info btn-xs'>Contacted</button></a></div>";
+	echo "      <div class='col-sm-1 cell list-group-item'><a href='functions.php?action=comment&item_id=$itemId&branch=$branch'><button type='button' class='btn btn-info btn-xs'>text</button></a></div>";
+	// echo "      <div class='col-sm-1 cell list-group-item'>" . getContact() . "</div>"; // Form for the remove operation.
+	// TODO Finish 'info' in functions.php and text box for comments.
+	echo "      <div class='col-sm-1 cell list-group-item'><a href='functions.php?action=info&item_id=$itemId&branch=$branch'><button type='button' class='btn btn-info btn-xs'>Info</button></a></div>"; // Form for the remove operation.
 	echo "  </div>";
 	$ran++;
 }

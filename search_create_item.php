@@ -76,7 +76,6 @@ $row = $ret->fetchArray(SQLITE3_ASSOC);
 if (! $row['count']){
 	echo "<p class='bg-danger'>Item: <kbd>$item</kbd> hasn't been reported as incomplete yet.</p>";
 	echo "<p><a href='functions.php?action=create&item_id=$item&branch=$branch'><button type='button' class='btn btn-info btn-lg'>Report it now?</button></a>";
-	// TODO: implement backend item of registration.
 } else {
 	echo "<p class='bg-success'>Item: <kbd>$item</kbd> found! ";
 	if ($row['Location']){
