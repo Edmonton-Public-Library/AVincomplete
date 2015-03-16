@@ -11,7 +11,7 @@
 <?php 
 ini_set('error_reporting', E_ALL);
 // phpinfo();
-// require 'db.inc';
+require 'db.inc';
 $branch = '';
 $itemId = '';
 if (! empty($_GET)) {

@@ -38,6 +38,7 @@
 <?php
 ini_set('error_reporting', E_ALL);
 require 'db.inc';
+
 $item = '';
 if (empty($_GET['item_id'])){ 
 	$msg = "bar code search requested, but none found.";
@@ -71,32 +72,33 @@ if (isset($_GET['branch'])){
 // Location CHAR(6) NOT NULL,
 // Comments CHAR(256)
 $ret = $db->query($sql);
-while ($row = $ret->fetchArray(SQLITE3_ASSOC)){
-	if (! $row['count']){
-		echo "<p class='bg-danger'>Item: <kbd>$item</kbd> hasn't been reported as incomplete yet.</p>";
-		echo "<p><button type='button' class='btn btn-info btn-lg'>Report it now?</button>";
-		// TODO: implement backend item of registration.
-	} else {
-		echo "<p class='bg-success'>Item: <kbd>$item</kbd> found! ";
-		if ($row['Location']){
-			if ($row['Location'] === $branch){
-				echo "I think the item should be here at <kbd>$branch</kbd>, check the AV shelf.";
-			} else {
-				echo "Transit to <kbd>".$row['Location']."</kbd>, and collect a star.<span class='glyphicon glyphicon-star'></span>";
-			}
+$row = $ret->fetchArray(SQLITE3_ASSOC);
+if (! $row['count']){
+	echo "<p class='bg-danger'>Item: <kbd>$item</kbd> hasn't been reported as incomplete yet.</p>";
+	echo "<p><a href='functions.php?action=create&item_id=$item&branch=$branch'><button type='button' class='btn btn-info btn-lg'>Report it now?</button></a>";
+	// TODO: implement backend item of registration.
+} else {
+	echo "<p class='bg-success'>Item: <kbd>$item</kbd> found! ";
+	if ($row['Location']){
+		if ($row['Location'] === $branch){
+			echo "I think the item should be here at <kbd>$branch</kbd>, check the AV shelf.";
 		} else {
-			echo "I have this item registered, but the branch isn't specified, <br/>so I can't tell you where to send it. Do you want to ask around?";
+			echo "Transit to <kbd>".$row['Location']."</kbd>, and collect a star.<span class='glyphicon glyphicon-star'></span>";
 		}
-		echo "</p><p><button type='button' class='btn btn-info btn-lg'>Mark it complete?</button>";
-		// TODO: implement backend mark it complete function.
+	} else {
+		echo "I have this item registered, but the branch isn't specified, <br/>so I can't tell you where to send it. Do you want to ask around?";
 	}
-	echo "<a href='index.php'>";
-	echo "<button type='button' class='btn btn-default btn-lg'>";
-	echo "<span class='glyphicon glyphicon-home'></span>";
-	echo "</button>";
-	echo "</a></p>";
-} 
-
+	// TODO: implement backend mark it complete function.
+	// To mark something complete we call the functions.php script
+	// below get with item id and the branch where the other part was found.
+	// Should be a PUT or UPDATE rest call, but let's leave that for later.
+	echo "</p><p><a href='functions.php?action=complete&item_id=$item&branch=$branch'><button type='button' class='btn btn-info btn-lg'>Mark it complete?</button></a>";
+}
+echo "<a href='index.php'>";
+echo "<button type='button' class='btn btn-default btn-lg'>";
+echo "<span class='glyphicon glyphicon-home'></span>";
+echo "</button>";
+echo "</a></p>";
 $db->close();
 ?>
 
