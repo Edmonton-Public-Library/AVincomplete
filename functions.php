@@ -31,6 +31,49 @@ require 'db.inc';
 ####################################################################################
 
 ###
+# Gets the information of the customer that last checked out this item.
+# param:  $db - database object.
+# param:  $item - the item id of the item to be created.
+# return: string of the customer's contact information.
+function get_customer_info(&$db, $item)
+{
+	// sqlite> .schema
+	// TABLE avincomplete (
+	// ItemId INTEGER PRIMARY KEY NOT NULL,
+	// Title CHAR(256),
+	// CreateDate DATE DEFAULT CURRENT_DATE,
+	// UserKey INTEGER,
+	// Contact INTEGER DEFAULT 0,
+	// ContactDate DATE DEFAULT NULL,
+	// Complete INTEGER DEFAULT 0,
+	// CompleteDate DATE DEFAULT NULL,
+	// Discard  INTEGER DEFAULT 0,
+	// DiscardDate DATE DEFAULT NULL,
+	// Location CHAR(6) NOT NULL,
+	// Comments CHAR(256)
+	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
+	$sql = "SELECT UserKey FROM avincomplete WHERE ItemId=$item;";
+	$ret = $db->query($sql);
+	$return_text = "No customer information found.";
+	$customer_id = '';
+	while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
+		$customer_id = $row['UserKey'];
+		// we use passthru it immediately sends the raw output from this program
+		// to the output stream with which PHP is currently working (i.e. either
+		// HTTP in a web server scenario, or the shell in a command line version of PHP).
+		// http://stackoverflow.com/questions/732832/php-exec-vs-system-vs-passthru
+		// $return_text = passthru("db/avincomplete.pl -u'$customer_id'");
+	}
+	$db->close();
+	$output = null;
+	$retval = -1;
+	exec("db/avincomplete.pl -u$customer_id", $output, $retval);
+	
+	echo "<pre>" . var_export($output, TRUE) . "</pre><br/>";
+	return var_export($output, TRUE);
+}
+
+###
 # Marks an item as complete. This is only to be done if you have received an item that makes 
 # an AV incomplete item complete, that is, if you have a DVD case and you receive the matching
 # (or near matching) disk from somewhere, and putting the two items together make the item 
@@ -191,15 +234,14 @@ if (! empty($_GET)) {
 		$branch = $_GET['branch'];
 		if ($_GET['action'] === 'complete'){ # Mark an item complete in database.
 			if (mark_item_complete($db, $item)){
-				$msg = "Item $item marked as complete, well done.";
-				header("Location:message.php?msg=$msg");
+				echo "Item <kbd>$item</kbd> marked as complete, well done.";
 			} else {
 				$msg = "Function '" . $_GET['action'] . "' failed in functions.php.";
 				header("Location:error.php?msg=$msg");
 			}
 		} elseif ($_GET['action'] === 'create'){ # Create a new entry (or register) item in database.
 			if (create_new_item($db, $item, $branch)){
-				$msg = "Item $item registered as incomplete.";
+				$msg = "Item <kbd>$item</kbd> registered as incomplete.";
 				header("Location:message.php?msg=$msg");
 			} else {
 				$msg = "Function '" . $_GET['action'] . "' failed in functions.php.";
@@ -207,16 +249,22 @@ if (! empty($_GET)) {
 			}
 		} elseif ($_GET['action'] === 'contact'){ # Contacted customer flag set on item in database.
 			if (mark_customer_contacted($db, $item)){
-				$msg = "Contacted customer flag set on item $item.";
-				header("Location:message.php?msg=$msg");
+				echo "Contacted customer flag set on item <kbd>$item</kbd>.";
 			} else {
 				$msg = "Function '" . $_GET['action'] . "' failed in functions.php.";
 				header("Location:error.php?msg=$msg");
 			}
 		} elseif ($_GET['action'] === 'discard'){ # Discard item flag set on item in database.
 			if (mark_item_discard($db, $item)){
-				$msg = "Item $item set to be discarded.";
-				header("Location:message.php?msg=$msg");
+				echo "Item <kbd>$item</kbd> set to be discarded.";
+			} else {
+				$msg = "Function '" . $_GET['action'] . "' failed in functions.php.";
+				header("Location:error.php?msg=$msg");
+			}
+		} elseif ($_GET['action'] === 'info'){ # get customer information.
+			$msg = get_customer_info($db, $item);
+			if (strlen($msg) > 0){
+				echo $msg;
 			} else {
 				$msg = "Function '" . $_GET['action'] . "' failed in functions.php.";
 				header("Location:error.php?msg=$msg");

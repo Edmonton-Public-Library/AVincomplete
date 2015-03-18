@@ -33,6 +33,7 @@
 	</div>
   </div>
 </nav>
+
 <div class="container-fluid">
 	<div class="col-sm-12">
      <h2 class="sub-header">Incomplete items at 
@@ -120,13 +121,13 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	echo "      <div class='col-sm-3 cell list-group-item'>" . $row['Title'] . "</div>";
 	echo "      <div class='col-sm-2 cell list-group-item'>" . convertANSIDate($row['CreateDate']) . "</div>";
 // TODO Fix so buttons are dynamically set to their values in the database.
-	echo "      <div class='col-sm-1 cell list-group-item'><a href='functions.php?action=discard&item_id=$itemId&branch=$branch'><button type='button' class='btn btn-info btn-xs'>Discard</button></a></div>";
-	echo "      <div class='col-sm-1 cell list-group-item'><a href='functions.php?action=complete&item_id=$itemId&branch=$branch'><button type='button' class='btn btn-info btn-xs'>Complete</button></a></div>";
-	echo "      <div class='col-sm-1 cell list-group-item'><a href='functions.php?action=contact&item_id=$itemId&branch=$branch'><button type='button' class='btn btn-info btn-xs'>Contacted</button></a></div>";
-	echo "      <div class='col-sm-1 cell list-group-item'><a href='functions.php?action=comment&item_id=$itemId&branch=$branch'><button type='button' class='btn btn-info btn-xs'>text</button></a></div>";
+	echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='discard' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-primary btn-xs' data-toggle='modal' data-target='.bs-example-modal-lg'>Discard</button></a></div>";
+	echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='complete' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-primary btn-xs' data-toggle='modal' data-target='.bs-example-modal-lg'>Complete</button></a></div>";
+	echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='contact' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-primary btn-xs' data-toggle='modal' data-target='.bs-example-modal-lg'>Contacted</button></a></div>";
+	echo "      <div class='col-sm-1 cell list-group-item'><a class='comments' my-action='comments' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-primary btn-xs' data-toggle='modal' data-target='.bs-example-modal-lg'>text</button></a></div>";
 	// echo "      <div class='col-sm-1 cell list-group-item'>" . getContact() . "</div>"; // Form for the remove operation.
 	// TODO Finish 'info' in functions.php and text box for comments.
-	echo "      <div class='col-sm-1 cell list-group-item'><a href='functions.php?action=info&item_id=$itemId&branch=$branch'><button type='button' class='btn btn-info btn-xs'>Info</button></a></div>"; // Form for the remove operation.
+	echo "      <div class='col-sm-1 cell list-group-item'><a class='info' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-primary btn-xs' data-toggle='modal' data-target='.bs-example-modal-lg'>Info</button></a></div>";
 	echo "  </div>";
 	$ran++;
 }
@@ -138,21 +139,30 @@ if ($ran == 0){
 	echo "    </div>";
 	echo "  </div>";
 }
-// function setDiscarded(){
-	// $sql = "UPDATE avincomplete SET Discard=1 WHERE ItemId=" . $_GET['itemId'];
-	// $db->query($sql);
-// }
-// $db->close();
+
 ?>
 			</div>
 		</div>
 	<div id='results' class='table'></div>
 </div>
-
-<!-- <form action='index.php'>
-<input type='submit' value='back'>
-</form>
--->
+<!-- Modal dialog box -->
+<div class='modal fade bs-example-modal-lg' tabindex='-1' role='dialog' aria-labelledby='myLargeModalLabel' aria-hidden='true'>
+  <div class='modal-dialog modal-sm'>
+    <div class='modal-content'>
+      <div class='modal-header'>
+         <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
+            <h4 class='modal-title'>Info</h4>
+         </div>
+         <div class='modal-body'>
+            <p id='info-dialog'>Oops, you shouldn't be seeing this</p>
+        </div>
+        <div class='modal-footer'>
+            <button type='button' class='btn btn-default' data-dismiss='modal'>Close</button>
+        </div>
+    </div>
+  </div>
+</div>
+<!-- end of Modal dialog box -->
 <script>
 var stickyOffset = $('.sticky').offset().top;
 
@@ -167,7 +177,32 @@ $(window).scroll(function(){
 
 var isDescending = false;
 $(document).ready(function(){
-	zebraRows();
+	// Handles all the actions related to displaying information in the modal dialogue box.
+	$("a.av-button").click(function(){
+        // $("#info-dialog").load("demo_test.txt");
+		itemId = $(this).attr('item_id');
+		branch = $(this).attr('branch');
+		myAction = $(this).attr('my-action');
+        $("#info-dialog").load(
+			"functions.php?action=" + myAction + "&item_id=" + itemId + "&branch=" + branch, 
+			function(responseTxt, statusTxt, xhr){
+				if(statusTxt == "error")
+					$("#info-dialog").text("Error: " + xhr.status + ": " + xhr.statusText);
+		});
+    });
+	
+	// Handles all the get customer information dialog boxes.
+	$("a.info").click(function(){
+        // $("#info-dialog").load("demo_test.txt");
+		itemId = $(this).attr('item_id');
+		branch = $(this).attr('branch');
+        $("#info-dialog").load(
+			"functions.php?action=info&item_id=" + itemId + "&branch=" + branch, 
+			function(responseTxt, statusTxt, xhr){
+				if(statusTxt == "error")
+					$("#info-dialog").text("Error: " + xhr.status + ": " + xhr.statusText);
+		});
+    });
 });
 
 $('a#title').click(
@@ -206,19 +241,6 @@ $('a#item_id').click(
 		zebraRows();
 	}
 );
-
-//used to apply alternating row styles
-function zebraRows(selector, className)
-{
-	myRows = $(".row");
-	$.each(myRows, function(i, val){
-		//console.log(i + '::' + val);
-		$(val).removeClass('odd');
-		if (i % 2 == 0){
-			$(val).addClass('odd');
-		}
-	});
-}
 
 /*
 * Sorts one of the columns.

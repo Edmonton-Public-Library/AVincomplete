@@ -69,14 +69,16 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-Cdfx] [-D<foo.bar>]
+	usage: $0 [-Cdfx] [-D<foo.bar>] [-u<user_key>]
 Creates and manages av incomplete sqlite3 database.
 
- -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
- -d: Debug.
- -D<file>: Dump hold table to HTML file <file>.
- -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
- -x: This (help) message.
+ -C:           Create new database called '$DB_FILE'. If the db exists '-f' must be used.
+ -d:           Debug.
+ -D<file>:     Dump hold table to HTML file <file>.
+ -f:           Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
+ -u<user_key>: Gets basic information about the last user for contact purposes 
+               including the user's barcode, profile, name, email address, and phone.
+ -x:           This (help) message.
 
 example: 
  $0 -x
@@ -91,7 +93,7 @@ EOF
 # return: 
 sub init
 {
-    my $opt_string = 'CdD:fx';
+    my $opt_string = 'CdD:fu:x';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	# Create new sqlite database.
@@ -119,6 +121,10 @@ CREATE TABLE avincomplete (
 	Title CHAR(256),
 	CreateDate DATE DEFAULT CURRENT_DATE,
 	UserKey INTEGER,
+	UserId INTEGER,
+	UserPhone CHAR(20),
+	UserName  CHAR(100),
+	UserEmail CHAR(100),
 	Contact INTEGER DEFAULT 0,
 	ContactDate DATE DEFAULT NULL,
 	Complete INTEGER DEFAULT 0,
@@ -131,6 +137,10 @@ CREATE TABLE avincomplete (
 END_SQL
 		$DBH->do($SQL);
 		$DBH->disconnect;
+		# Set permissions so the eventual owner (www-data) and ilsdev account
+		# can cron maintenance.
+		my $mode = 0664;
+		chmod $mode, $DB_FILE;
 		exit;
 	}
 	if ( $opt{'D'} ) 
@@ -140,6 +150,14 @@ END_SQL
 		# print HTML `echo "SELECT user_id, user_profile, title, date FROM holds;" | sqlite3 -html $DB_FILE`;
 		close HTML;
 		exit;
+	}
+	if ( $opt{'u'} ) 
+	{
+		my $userKey = $opt{'u'};
+		# This line takes a user key and gets the user's barcode, profile, name, email address, and phone.
+		# my $results = `echo $userKey | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | seluser -iU -oBpDX.9007.X.9009.'`;
+		print STDOUT "Hello PHP!";
+		exit 3;
 	}
 }
 
@@ -157,8 +175,24 @@ $DBH = DBI->connect($DSN, $USER, $PASSWORD, {
 # return: <none>
 sub insert( $ )
 {
+# From discardweb...
+# my ( $id, $checkoutDate, $iType, $callNum, $tcn, $titleAuthor, $pubDate, $pub, $holds ) = @_;
+	# $SQL = << "END_SQL";
+# INSERT OR IGNORE INTO last_copy 
+# (ItemID, DateCharged, ItemType, HoldCount, CallNum, TitleControlNumber, TitleAuthor, PublicationDate, Publication) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+# END_SQL
+	# $DBH->do($SQL, undef, $id, $checkoutDate, $iType, $holds, $callNum, $tcn, $titleAuthor, $pubDate, $pub);
+	If you inserted then this just updates, but if insert failed because it exists, then this will run.
+	# $SQL = <<"END_SQL";
+# UPDATE last_copy SET DateCharged=?, ItemType=?, HoldCount=?, CallNum=?, TitleControlNumber=?, TitleAuthor=?, PublicationDate=?, Publication=? 
+# WHERE ItemID=?
+# END_SQL
+	# $DBH->do($SQL, undef, $checkoutDate, $iType, $holds, $callNum, $tcn, $titleAuthor, $pubDate, $pub, $id);
+	# return;
+
+
+
 	my $line = shift;
-	
 	my ($ItemId, $Title, $CreateDate, $UserKey, $Contact, $ContactDate, $Complete, $CompleteDate, $Discard, $DiscardDate, $Location, $Comments) = @_;
 	$SQL = <<"END_SQL";
 INSERT OR REPLACE INTO holds 
