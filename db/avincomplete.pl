@@ -60,7 +60,21 @@ my $USER     = "";
 my $PASSWORD = "";
 my $DBH      = "";
 my $SQL      = "";
+
+my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
+
 my $VERSION  = qq{0.1};
+
+# Trim function to remove whitespace from the start and end of the string.
+# param:  string to trim.
+# return: string without leading or trailing spaces.
+sub trim( $ )
+{
+	my $string = shift;
+	$string =~ s/^\s+//;
+	$string =~ s/\s+$//;
+	return $string;
+}
 
 #
 # Message about this program and how to use it.
@@ -69,15 +83,15 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-Cdfx] [-D<foo.bar>] [-u<user_key>]
+	usage: $0 [-CdfuUx] [-D<foo.bar>]
 Creates and manages av incomplete sqlite3 database.
 
  -C:           Create new database called '$DB_FILE'. If the db exists '-f' must be used.
  -d:           Debug.
  -D<file>:     Dump hold table to HTML file <file>.
  -f:           Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
- -u<user_key>: Gets basic information about the last user for contact purposes 
-               including the user's barcode, profile, name, email address, and phone.
+ -u      : Updates database based on items entered into the database by the website
+ -U      : Updates database based on items on cards with $AVSNAG profile.
  -x:           This (help) message.
 
 example: 
@@ -93,7 +107,7 @@ EOF
 # return: 
 sub init
 {
-    my $opt_string = 'CdD:fu:x';
+    my $opt_string = 'CdD:fuUx';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	# Create new sqlite database.
@@ -125,6 +139,8 @@ CREATE TABLE avincomplete (
 	UserPhone CHAR(20),
 	UserName  CHAR(100),
 	UserEmail CHAR(100),
+	Processed INTEGER DEFAULT 0,
+	ProcessDate DATE DEFAULT NULL,
 	Contact INTEGER DEFAULT 0,
 	ContactDate DATE DEFAULT NULL,
 	Complete INTEGER DEFAULT 0,
@@ -132,6 +148,8 @@ CREATE TABLE avincomplete (
 	Discard  INTEGER DEFAULT 0,
 	DiscardDate DATE DEFAULT NULL,
 	Location CHAR(6) NOT NULL,
+	TransitLocation CHAR(6) DEFAULT NULL,
+	TransitDate DATE DEFAULT NULL,
 	Comments CHAR(256)
 );
 END_SQL
@@ -147,17 +165,56 @@ END_SQL
 	{
 		my $dumpFile = $opt{'D'};
 		open HTML, ">$dumpFile" or die "**error: unable to write to file '$dumpFile', $!\n";
-		# print HTML `echo "SELECT user_id, user_profile, title, date FROM holds;" | sqlite3 -html $DB_FILE`;
+		print HTML `echo "SELECT * FROM avincomplete;" | sqlite3 -html $DB_FILE`;
 		close HTML;
 		exit;
 	}
-	if ( $opt{'u'} ) 
+	# Update database from items entered into the local database by the web site.
+	if ( $opt{'u'} )
 	{
-		my $userKey = $opt{'u'};
-		# This line takes a user key and gets the user's barcode, profile, name, email address, and phone.
-		# my $results = `echo $userKey | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | seluser -iU -oBpDX.9007.X.9009.'`;
-		print STDOUT "Hello PHP!";
-		exit 3;
+		exit;
+	}
+	# Update database from AVSNAG profile cards.
+	if ( $opt{'U'} )
+	{
+		# $DBH = DBI->connect($DSN, $USER, $PASSWORD, {
+			# PrintError       => 0,
+			# RaiseError       => 1,
+			# AutoCommit       => 1,
+			# FetchHashKeyName => 'NAME_lc',
+		# });
+		# print `echo 'SELECT COUNT(*) FROM avincomplete;' | sqlite3 $DB_FILE`;
+		my $API_OUT = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL-AVSNAG" -oUB | selcharge -iU -oIS | selitem -iI -oBS'`;
+		# produces output like:
+		# -- snip --
+		# 31221106078913  |MEA-AVINCOMPLETE|
+		# 31221110713802  |MEA-AVINCOMPLETE|
+		# 31221102771743  |CLV-AVINCOMPLETE|
+		# 31221103173055  |CLV-AVINCOMPLETE|
+		# -- snip --
+		# We can put that into the local database then '-u' can be used to fill in details on items.
+		my @data = split '\n', $API_OUT;
+		while (@data)
+		{
+			my $line = shift @data;
+			my($item, $location) = split( '\|', $line );
+			if ( defined $item and defined $location )
+			{
+				$item     = trim( $item );
+				$location = trim( $location );
+				# This is brittle, but it seems that most cards are named by branch as the first 3 characters.
+				# If that holds lets get them now.
+				$location = substr( $location, 0, 3 );
+				print STDERR "adding item '$item' from branch '$location'\n";
+				`echo 'INSERT OR IGNORE INTO avincomplete (ItemId, Location) VALUES ($item, "$location");' | sqlite3 $DB_FILE`;
+			}
+			else
+			{
+				print STDERR "rejecting item '$item' branch '$location'\n";
+			}
+		}
+		# $DBH->disconnect;
+		exit;
 	}
 }
 
@@ -173,7 +230,7 @@ $DBH = DBI->connect($DSN, $USER, $PASSWORD, {
 # Inserts a line of data into the ncip database.
 # param:  Line taken from ncip logs.
 # return: <none>
-sub insert( $ )
+sub insert
 {
 # From discardweb...
 # my ( $id, $checkoutDate, $iType, $callNum, $tcn, $titleAuthor, $pubDate, $pub, $holds ) = @_;
@@ -182,7 +239,7 @@ sub insert( $ )
 # (ItemID, DateCharged, ItemType, HoldCount, CallNum, TitleControlNumber, TitleAuthor, PublicationDate, Publication) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 # END_SQL
 	# $DBH->do($SQL, undef, $id, $checkoutDate, $iType, $holds, $callNum, $tcn, $titleAuthor, $pubDate, $pub);
-	If you inserted then this just updates, but if insert failed because it exists, then this will run.
+	## If you inserted then this just updates, but if insert failed because it exists, then this will run.
 	# $SQL = <<"END_SQL";
 # UPDATE last_copy SET DateCharged=?, ItemType=?, HoldCount=?, CallNum=?, TitleControlNumber=?, TitleAuthor=?, PublicationDate=?, Publication=? 
 # WHERE ItemID=?
@@ -191,19 +248,47 @@ sub insert( $ )
 	# return;
 
 
-
-	my $line = shift;
-	my ($ItemId, $Title, $CreateDate, $UserKey, $Contact, $ContactDate, $Complete, $CompleteDate, $Discard, $DiscardDate, $Location, $Comments) = @_;
+	my ($ItemId, $Title) = @_;
 	$SQL = <<"END_SQL";
-INSERT OR REPLACE INTO holds 
-(ItemId, Title, CreateDate, UserKey, Contact, ContactDate, Complete, CompleteDate, Discard, DiscardDate, Location, Comments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT OR IGNORE INTO avincomplete 
+(
+ItemId, Title
+) 
+VALUES 
+(
+?, ?
+)
 END_SQL
-	$DBH->do($SQL, undef, $ItemId, $Title, $CreateDate, $UserKey, $Contact, $ContactDate, $Complete, $CompleteDate, $Discard, $DiscardDate, $Location, $Comments);
+	$DBH->do($SQL, undef, 
+	$ItemId, $Title
+);
 	return;
 }
 
 # grab all the Data from the ILS.
-my $API_OUT = `ssh sirsi\@eplapp.library.ualberta.ca 'perl /s/sirsi/Unicorn/Bincustom/ncipstats.pl -a | seluser -iB -oSUBp'`;
+# This could initially fill the table, we grab all the items from AVSNAG cards.
+# When staff click add a new item will appear in table, those will be collected at the end of the day and 
+# the empty fields filled out to include information from the ILS. If the item is not found in the ILS, the
+# entry will be removed from the (local) avincomplete table.
+# Additionally the script will have to go and recheck the ILS nightly to find new items to insert into the database.
+# We shall use the algorithm of INSERT IGNORE ON DUPLICATE and then do an update to the record.
+#
+# === Details ===
+# Behind the scenes the script will grab all the items that are unprocessed.
+# * select * from avincomplete where processed = 0
+# * process this list:
+#    check if the item is charged:
+#    YES: 
+#      is AVSNAG?
+#       YES: record previous customer.
+#       NO: record current customer, discharge item from customer and charge to branch's AVSNAG card (See chargeitem.pl). 
+#           Place copy level hold on item for branch's AVSNAG card (See createhold.pl).
+#     NO: record previous customer charge to branch's AVSNAG card (See chargeitem.pl). 
+#         Place copy level hold on item for branch's AVSNAG card (See createhold.pl).
+# * insert data into database
+# ** Title, checked out, previous user key, current user key, user id, Name, phone, email. 
+
+my $API_OUT = `ssh sirsi\@eplapp.library.ualberta.ca ' | seluser -iB -oSUBp'`;
 my @data = split '\n', $API_OUT;
 while (@data)
 {
