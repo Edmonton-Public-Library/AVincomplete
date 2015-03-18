@@ -170,50 +170,88 @@ END_SQL
 		exit;
 	}
 	# Update database from items entered into the local database by the web site.
+	# We want to get data for all the items that don't already have it so we will need:
+	# 
 	if ( $opt{'u'} )
 	{
+		my $results = `echo 'SELECT ItemId FROM avincomplete WHERE Processed=0;' | sqlite3 $DB_FILE`;
+		my @data = split '\n', $results;
+		while (@data)
+		{
+			
+		}
 		exit;
 	}
-	# Update database from AVSNAG profile cards.
+	# Update database from AVSNAG profile cards, inserts new records or ignores if it's already there.
 	if ( $opt{'U'} )
 	{
-		# $DBH = DBI->connect($DSN, $USER, $PASSWORD, {
-			# PrintError       => 0,
-			# RaiseError       => 1,
-			# AutoCommit       => 1,
-			# FetchHashKeyName => 'NAME_lc',
-		# });
-		# print `echo 'SELECT COUNT(*) FROM avincomplete;' | sqlite3 $DB_FILE`;
-		my $API_OUT = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL-AVSNAG" -oUB | selcharge -iU -oIS | selitem -iI -oBS'`;
+		# my $API_OUT = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL-AVSNAG" -oUB | selcharge -iU -oIS | selitem -iI -oBSs'`;
+		# seluser -p"EPL-AVSNAG" -oUB | selcharge -iU -oIS # Finds all charges by card and outputs item id and AVSNAG barcode
+		# selitem -iI -oCsBS # Takes item id and outputs cat key previous user (PU) key and item's barcode.
+		# selcatalog -iC -oSt # Takes the cat key and outputs everything so far and the title.
+		# seluser -iU -oSUBDX.9005.X.9007. # Gets the user's key which is first on the output from above and looks up contact info PHONE and EMAIL. 
+		my $API_OUT = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL-AVSNAG" -oUB | selcharge -iU -oIS | selitem -iI -oCsBS | selcatalog -iC -oSV | seluser -iU -oSUBDX.9026.X.9007.'`;
 		# produces output like:
 		# -- snip --
-		# 31221106078913  |MEA-AVINCOMPLETE|
-		# 31221110713802  |MEA-AVINCOMPLETE|
-		# 31221102771743  |CLV-AVINCOMPLETE|
-		# 31221103173055  |CLV-AVINCOMPLETE|
+		# 31221106301570  |CLV-AVINCOMPLETE|Call of duty|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
+		# 31221102616518  |CLV-AVINCOMPLETE|Pride and prejudice [videorecording]|535652|21221021851248|Smith, Merlin|780-244-5655|xxxxxxxx@hotmail.com|
+		# 31221106335685  |CLV-AVINCOMPLETE|Up all night |1123298|CLV-AVINCOMPLETE|CLV-AV Incomplete|||
+		# 31221107371440  |CLV-AVINCOMPLETE|Ske-dat-de-dat|582982|ABB-AVINCOMPLETE|ABB-AV Incomplete|||
 		# -- snip --
 		# We can put that into the local database then '-u' can be used to fill in details on items.
 		my @data = split '\n', $API_OUT;
 		while (@data)
 		{
 			my $line = shift @data;
-			my($item, $location) = split( '\|', $line );
-			if ( defined $item and defined $location )
+			my($itemId, $location, $title, $userKey, $userId, $name, $phone, $email) = split( '\|', $line );
+			if ( defined $itemId and defined $location )
 			{
-				$item     = trim( $item );
+				$itemId     = trim( $itemId );
+				$userKey  = trim( $userKey );
+				$userId   = trim( $userId );
+				if ( $userId !~ m/\d{13,}/ )
+				{
+					$name = 'N/A';
+					$phone= 'N/A';
+					$email= 'N/A';
+				}
+				$title    = trim( $title );
+				$name     = trim( $name );
+				$phone    = trim( $phone );
+				$email    = trim( $email );
 				$location = trim( $location );
 				# This is brittle, but it seems that most cards are named by branch as the first 3 characters.
 				# If that holds lets get them now.
 				$location = substr( $location, 0, 3 );
-				print STDERR "adding item '$item' from branch '$location'\n";
-				`echo 'INSERT OR IGNORE INTO avincomplete (ItemId, Location) VALUES ($item, "$location");' | sqlite3 $DB_FILE`;
+				print STDERR "adding item '$itemId' from branch '$location'\n";
+				# ItemId INTEGER PRIMARY KEY NOT NULL,
+				# Title CHAR(256),
+				# CreateDate DATE DEFAULT CURRENT_DATE,
+				# UserKey INTEGER,
+				# UserId INTEGER,
+				# UserPhone CHAR(20),
+				# UserName  CHAR(100),
+				# UserEmail CHAR(100),
+				# Processed INTEGER DEFAULT 0,
+				# ProcessDate DATE DEFAULT NULL,
+				# Contact INTEGER DEFAULT 0,
+				# ContactDate DATE DEFAULT NULL,
+				# Complete INTEGER DEFAULT 0,
+				# CompleteDate DATE DEFAULT NULL,
+				# Discard  INTEGER DEFAULT 0,
+				# DiscardDate DATE DEFAULT NULL,
+				# Location CHAR(6) NOT NULL,
+				# TransitLocation CHAR(6) DEFAULT NULL,
+				# TransitDate DATE DEFAULT NULL,
+				# Comments CHAR(256)
+				# 31221106301570  |CLV-AVINCOMPLETE|Call of duty|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
+				`echo 'INSERT OR IGNORE INTO avincomplete (ItemId, Location, Title, UserKey, UserId, UserName, UserPhone, UserEmail, Processed, ProcessDate) VALUES ($itemId, "$location", "$title", $userKey, $userId, "$name", "$phone", "$email", 1, strftime("\%Y-\%m-\%d", DATETIME("now")));' | sqlite3 $DB_FILE`;
 			}
 			else
 			{
-				print STDERR "rejecting item '$item' branch '$location'\n";
+				print STDERR "rejecting item '$itemId' branch '$location'\n";
 			}
 		}
-		# $DBH->disconnect;
 		exit;
 	}
 }
