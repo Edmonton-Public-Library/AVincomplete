@@ -62,6 +62,8 @@ my $DBH      = "";
 my $SQL      = "";
 
 my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
+my $DATE     = `date +%Y-%m-%d`;
+chomp( $DATE );
 
 my $VERSION  = qq{0.1};
 
@@ -86,13 +88,13 @@ sub usage()
 	usage: $0 [-CdfuUx] [-D<foo.bar>]
 Creates and manages av incomplete sqlite3 database.
 
- -C:           Create new database called '$DB_FILE'. If the db exists '-f' must be used.
- -d:           Debug.
- -D<file>:     Dump hold table to HTML file <file>.
- -f:           Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
- -u      : Updates database based on items entered into the database by the website
- -U      : Updates database based on items on cards with $AVSNAG profile.
- -x:           This (help) message.
+ -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
+ -d: Debug.
+ -D<file>: Dump hold table to HTML file <file>.
+ -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
+ -u: Updates database based on items entered into the database by the website
+ -U: Updates database based on items on cards with $AVSNAG profile.
+ -x: This (help) message.
 
 example: 
  $0 -x
@@ -185,6 +187,12 @@ END_SQL
 	# Update database from AVSNAG profile cards, inserts new records or ignores if it's already there.
 	if ( $opt{'U'} )
 	{
+		$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
+			PrintError       => 0,
+			RaiseError       => 1,
+			AutoCommit       => 1,
+			FetchHashKeyName => 'NAME_lc',
+		});
 		# my $API_OUT = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL-AVSNAG" -oUB | selcharge -iU -oIS | selitem -iI -oBSs'`;
 		# seluser -p"EPL-AVSNAG" -oUB | selcharge -iU -oIS # Finds all charges by card and outputs item id and AVSNAG barcode
 		# selitem -iI -oCsBS # Takes item id and outputs cat key previous user (PU) key and item's barcode.
@@ -245,13 +253,24 @@ END_SQL
 				# TransitDate DATE DEFAULT NULL,
 				# Comments CHAR(256)
 				# 31221106301570  |CLV-AVINCOMPLETE|Call of duty|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
-				`echo 'INSERT OR IGNORE INTO avincomplete (ItemId, Location, Title, UserKey, UserId, UserName, UserPhone, UserEmail, Processed, ProcessDate) VALUES ($itemId, "$location", "$title", $userKey, $userId, "$name", "$phone", "$email", 1, strftime("\%Y-\%m-\%d", DATETIME("now")));' | sqlite3 $DB_FILE`;
+				# TODO: Some fields seem to be causing failed loads, probably irregular characters, sanitize
+				# strings before trying to load. See, and modify trim().
+				# print "$itemId, '$location', '$title', $userKey, $userId, '$name', '$phone', '$email'\n";
+				# `echo 'INSERT OR IGNORE INTO avincomplete (ItemId, Location, Title, UserKey, UserId, UserName, UserPhone, UserEmail, Processed, ProcessDate) VALUES ($itemId, "$location", "$title", $userKey, $userId, "$name", "$phone", "$email", 1, strftime("\%Y-\%m-\%d", DATETIME("now")));' | sqlite3 $DB_FILE`;
+				$SQL = <<"END_SQL";
+INSERT OR IGNORE INTO avincomplete 
+(ItemId, Location, Title, UserKey, UserId, UserName, UserPhone, UserEmail, Processed, ProcessDate) 
+VALUES 
+(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+END_SQL
+				$DBH->do($SQL, undef, $itemId, $location, $title, $userKey, $userId, $name, $phone, $email, 1, $DATE);
 			}
 			else
 			{
 				print STDERR "rejecting item '$itemId' branch '$location'\n";
 			}
 		}
+		$DBH->disconnect;
 		exit;
 	}
 }
