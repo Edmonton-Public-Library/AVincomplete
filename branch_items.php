@@ -93,18 +93,26 @@ if (empty($_GET['branch']) || $_GET['branch'] == 'ALL'){
 	$sql = "SELECT * FROM avincomplete WHERE Location='" . $_GET['branch'] . "'";
 }
 // TABLE avincomplete 
-// ItemId INTEGER PRIMARY KEY NOT NULL,
-// Title CHAR(256),
-// CreateDate DATE DEFAULT CURRENT_DATE,
-// UserKey INTEGER,
-// Contact INTEGER DEFAULT 0,
-// ContactDate DATE DEFAULT NULL,
-// Complete INTEGER DEFAULT 0,
-// CompleteDate DATE DEFAULT NULL,
-// Discard  INTEGER DEFAULT 0,
-// DiscardDate DATE DEFAULT NULL,
-// Location CHAR(6) NOT NULL,
-// Comments CHAR(256)
+# ItemId INTEGER PRIMARY KEY NOT NULL,
+# Title CHAR(256),
+# CreateDate DATE DEFAULT CURRENT_DATE,
+# UserKey INTEGER,
+# UserId INTEGER,
+# UserPhone CHAR(20),
+# UserName  CHAR(100),
+# UserEmail CHAR(100),
+# Processed INTEGER DEFAULT 0,
+# ProcessDate DATE DEFAULT NULL,
+# Contact INTEGER DEFAULT 0,
+# ContactDate DATE DEFAULT NULL,
+# Complete INTEGER DEFAULT 0,
+# CompleteDate DATE DEFAULT NULL,
+# Discard  INTEGER DEFAULT 0,
+# DiscardDate DATE DEFAULT NULL,
+# Location CHAR(6) NOT NULL,
+# TransitLocation CHAR(6) DEFAULT NULL,
+# TransitDate DATE DEFAULT NULL,
+# Comments CHAR(256)
 $ret = $db->query($sql);
 $ran = 0;
 while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
@@ -117,13 +125,24 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	echo "      <div class='col-sm-3 cell list-group-item'>" . $row['Title'] . "</div>";
 	echo "      <div class='col-sm-1 cell list-group-item'>" . $row['CreateDate'] . "</div>";
 // TODO Fix so buttons are dynamically set to their values in the database.
-	echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='discard' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-primary btn-xs' data-toggle='modal' data-target='.bs-example-modal-lg'>Discard</button></a></div>";
-	echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='complete' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-primary btn-xs' data-toggle='modal' data-target='.bs-example-modal-lg'>Complete</button></a></div>";
-	echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='contact' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-primary btn-xs' data-toggle='modal' data-target='.bs-example-modal-lg'>Contacted</button></a></div>";
-	echo "      <div class='col-sm-1 cell list-group-item'><a class='comments' my-action='comments' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-primary btn-xs' data-toggle='modal' data-target='.bs-example-modal-lg'>text</button></a></div>";
-	// echo "      <div class='col-sm-1 cell list-group-item'>" . getContact() . "</div>"; // Form for the remove operation.
-	// TODO Finish 'info' in functions.php and text box for comments.
-	echo "      <div class='col-sm-1 cell list-group-item'><a class='info' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-primary btn-xs' data-toggle='modal' data-target='.bs-example-modal-lg'>Info</button></a></div>";
+	if ($row['Discard'] == 1){
+		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='discard' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-trash'></span></button></a></div>";
+	} else {
+		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='discard' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-trash'></span></button></a></div>";
+	}
+	if ($row['Complete'] == 1){
+		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='complete' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-ok'></span></button></a></div>";
+	} else {
+		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='complete' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-ok'></span></button></a></div>";
+	}
+	if ($row['Contact'] == 1){
+		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='contact' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-earphone'></span></button></a></div>";
+	} else {
+		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='contact' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-earphone'></span></button></a></div>";
+	}
+	# TODO add function to bring up a modal data entry window for comments.
+	echo "      <div class='col-sm-1 cell list-group-item'><a class='comments' my-action='comments' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-pencil'></span></button></a></div>";
+	echo "      <div class='col-sm-1 cell list-group-item'><a class='info' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-question-sign'></span></button></a></div>";
 	echo "  </div>";
 	$ran++;
 }
