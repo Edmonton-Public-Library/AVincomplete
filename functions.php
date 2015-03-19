@@ -39,38 +39,36 @@ function get_customer_info(&$db, $item)
 {
 	// sqlite> .schema
 	// TABLE avincomplete (
-	// ItemId INTEGER PRIMARY KEY NOT NULL,
-	// Title CHAR(256),
-	// CreateDate DATE DEFAULT CURRENT_DATE,
-	// UserKey INTEGER,
-	// Contact INTEGER DEFAULT 0,
-	// ContactDate DATE DEFAULT NULL,
-	// Complete INTEGER DEFAULT 0,
-	// CompleteDate DATE DEFAULT NULL,
-	// Discard  INTEGER DEFAULT 0,
-	// DiscardDate DATE DEFAULT NULL,
-	// Location CHAR(6) NOT NULL,
-	// Comments CHAR(256)
+	# ItemId INTEGER PRIMARY KEY NOT NULL,
+	# Title CHAR(256),
+	# CreateDate DATE DEFAULT CURRENT_DATE,
+	# UserKey INTEGER,
+	# UserId INTEGER,
+	# UserPhone CHAR(20),
+	# UserName  CHAR(100),
+	# UserEmail CHAR(100),
+	# Processed INTEGER DEFAULT 0,
+	# ProcessDate DATE DEFAULT NULL,
+	# Contact INTEGER DEFAULT 0,
+	# ContactDate DATE DEFAULT NULL,
+	# Complete INTEGER DEFAULT 0,
+	# CompleteDate DATE DEFAULT NULL,
+	# Discard  INTEGER DEFAULT 0,
+	# DiscardDate DATE DEFAULT NULL,
+	# Location CHAR(6) NOT NULL,
+	# TransitLocation CHAR(6) DEFAULT NULL,
+	# TransitDate DATE DEFAULT NULL,
+	# Comments CHAR(256)
 	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
-	$sql = "SELECT UserKey FROM avincomplete WHERE ItemId=$item;";
+	$sql = "SELECT UserId, UserName, UserPhone, Title, UserEmail FROM avincomplete WHERE ItemId=$item;";
 	$ret = $db->query($sql);
-	$return_text = "No customer information found.";
-	$customer_id = '';
+	$output = '';
 	while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
-		$customer_id = $row['UserKey'];
-		// we use passthru it immediately sends the raw output from this program
-		// to the output stream with which PHP is currently working (i.e. either
-		// HTTP in a web server scenario, or the shell in a command line version of PHP).
-		// http://stackoverflow.com/questions/732832/php-exec-vs-system-vs-passthru
-		// $return_text = passthru("db/avincomplete.pl -u'$customer_id'");
+		$output = 'bar code: '. $row['UserId'].'<br/>name: '.$row['UserName'].
+		'<br/>phone: '.$row['UserPhone'].'<br/>email: <a href="mailto:'.$row['UserEmail'].'?Subject=Item borrowed from EPL: '.$row['Title'].'." target="_top">'.$row['UserEmail'].'</a>';
 	}
 	$db->close();
-	$output = null;
-	$retval = -1;
-	exec("db/avincomplete.pl -u$customer_id", $output, $retval);
-	
-	echo "<pre>" . var_export($output, TRUE) . "</pre><br/>";
-	return var_export($output, TRUE);
+	return $output;
 }
 
 ###

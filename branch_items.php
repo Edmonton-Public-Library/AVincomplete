@@ -57,7 +57,7 @@
 		<div class='header sticky row'>
 			<div class='col-sm-2 cell list-group-item active'>Bar Code&nbsp;<a id='item_id' href='#' title='sort'><img src='images/sort.gif' /></a></div>
 			<div class='col-sm-3 cell list-group-item active'>Title&nbsp;<a id='title' href='#' title='sort'><img src='images/sort.gif' /></a></div>
-			<div class='col-sm-2 cell list-group-item active'>Date&nbsp;<a id='date' href='#' title='sort'><img src='images/sort.gif' /></a></div>
+			<div class='col-sm-1 cell list-group-item active'>Date&nbsp;<a id='date' href='#' title='sort'><img src='images/sort.gif' /></a></div>
 			<div class='col-sm-1 cell list-group-item active'>Discard</div>
 			<div class='col-sm-1 cell list-group-item active'>Complete</div>
 			<div class='col-sm-1 cell list-group-item active'>Contact</div>
@@ -68,10 +68,6 @@
 ini_set('error_reporting', E_ALL);
 // phpinfo();
 require 'db.inc';
-
-function convertANSIDate($date){
-	return substr($date, 0, 4) . "-" . substr($date, 4, 2) . "-" . substr($date, 6);
-}
 
 # creates a get more information form which will display customer information.
 function getContact(){
@@ -119,7 +115,7 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	echo "  <div class='row rowGroup' date_create='$dateCreated' item_id='$itemId' title='$title'>";
 	echo "      <div class='col-sm-2 cell list-group-item'>" . $row['ItemId'] . "</div>";
 	echo "      <div class='col-sm-3 cell list-group-item'>" . $row['Title'] . "</div>";
-	echo "      <div class='col-sm-2 cell list-group-item'>" . convertANSIDate($row['CreateDate']) . "</div>";
+	echo "      <div class='col-sm-1 cell list-group-item'>" . $row['CreateDate'] . "</div>";
 // TODO Fix so buttons are dynamically set to their values in the database.
 	echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='discard' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-primary btn-xs' data-toggle='modal' data-target='.bs-example-modal-lg'>Discard</button></a></div>";
 	echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='complete' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-primary btn-xs' data-toggle='modal' data-target='.bs-example-modal-lg'>Complete</button></a></div>";

@@ -180,10 +180,10 @@ END_SQL
 		my @data = split '\n', $results;
 		while (@data)
 		{
-			
+			# There will be a bar code here if successful. We need to get 
 		}
 		exit;
-	}
+	} # End of '-u' switch handling.
 	# Update database from AVSNAG profile cards, inserts new records or ignores if it's already there.
 	if ( $opt{'U'} )
 	{
@@ -253,10 +253,7 @@ END_SQL
 				# TransitDate DATE DEFAULT NULL,
 				# Comments CHAR(256)
 				# 31221106301570  |CLV-AVINCOMPLETE|Call of duty|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
-				# TODO: Some fields seem to be causing failed loads, probably irregular characters, sanitize
-				# strings before trying to load. See, and modify trim().
 				# print "$itemId, '$location', '$title', $userKey, $userId, '$name', '$phone', '$email'\n";
-				# `echo 'INSERT OR IGNORE INTO avincomplete (ItemId, Location, Title, UserKey, UserId, UserName, UserPhone, UserEmail, Processed, ProcessDate) VALUES ($itemId, "$location", "$title", $userKey, $userId, "$name", "$phone", "$email", 1, strftime("\%Y-\%m-\%d", DATETIME("now")));' | sqlite3 $DB_FILE`;
 				$SQL = <<"END_SQL";
 INSERT OR IGNORE INTO avincomplete 
 (ItemId, Location, Title, UserKey, UserId, UserName, UserPhone, UserEmail, Processed, ProcessDate) 
@@ -272,7 +269,7 @@ END_SQL
 		}
 		$DBH->disconnect;
 		exit;
-	}
+	} # End of '-U' switch handling.
 }
 
 init();
