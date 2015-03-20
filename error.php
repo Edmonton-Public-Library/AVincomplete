@@ -57,7 +57,7 @@
 			<p/>
 			<p>
 				<a href="index.php">
-					<button type="button" class="btn btn-info btn-block">
+					<button type="button" class="btn btn-primary btn-block">
 						<span class="glyphicon glyphicon-home"></span>
 					</button>
 				</a> 

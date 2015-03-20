@@ -11,9 +11,9 @@
 </head>
 <body>
 <div class="container">
-<div class="col-sm-6">
+<div class="col-sm-4">
 	<form role='form' action='data.php' method='GET'>
-		<h2 class="form-signin-heading">Welcome to AV incomplete</h2>
+		<h2 class="form-signin-heading">AV incomplete</h2>
 		<div class="form-group">
 		<label for="sel1">Select your branch:</label>
 		<select class="form-control" id="sel1" name='branch' required>
@@ -47,6 +47,10 @@
 		<button class="btn btn-lg btn-primary btn-block" type="submit">Let's go!</button>
 		</div> <!-- form group -->
 	</form>
+	<p>
+		<a href="#"><span class="glyphicon glyphicon-copyright-mark"></span></a> 2015 Edmonton Public Library&nbsp;
+		<a href="help.php"><span class="glyphicon glyphicon-info-sign"></span></a>
+	</p>
 </div> <!-- /container -->
 <script>
 // Clears the input fields if you set focus on them.
