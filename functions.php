@@ -161,7 +161,7 @@ function mark_customer_contacted(&$db, $item)
 	// Comments CHAR(256)
 	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
 	$sql = <<<EOF_SQL
-UPDATE avincomplete SET Contact=1, ContactDate=strftime('%Y%m%d', DATETIME('now')) WHERE ItemId=:id
+UPDATE avincomplete SET Contact=1, ContactDate=strftime('%Y-%m-%d', DATETIME('now')) WHERE ItemId=:id
 EOF_SQL;
 	$stmt = $db->prepare($sql);
 	$stmt->bindValue(':id', $item, SQLITE3_INTEGER);
@@ -197,7 +197,7 @@ function create_new_item(&$db, $item, $branch)
 	// Location CHAR(6) NOT NULL,
 	// Comments CHAR(256)
 	$sql = <<<EOF_SQL
-INSERT OR IGNORE INTO avincomplete (ItemId, Title, CreateDate, Location) VALUES (:id, :title, strftime('%Y%m%d', DATETIME('now')), :branch);
+INSERT OR IGNORE INTO avincomplete (ItemId, Title, CreateDate, Location) VALUES (:id, :title, strftime('%Y-%m-%d', DATETIME('now')), :branch);
 EOF_SQL;
 	$stmt = $db->prepare($sql);
 	$stmt->bindValue(':id', $item, SQLITE3_INTEGER);
@@ -205,7 +205,7 @@ EOF_SQL;
 	$stmt->bindValue(':branch', $branch, SQLITE3_TEXT);
 	$result = $stmt->execute();
 	$sql = <<<EOF_SQL
-UPDATE avincomplete SET Title=:title, CreateDate=strftime('%Y%m%d', DATETIME('now')), Location=:branch WHERE ItemId=:id;
+UPDATE avincomplete SET Title=:title, CreateDate=strftime('%Y-%m-%d', DATETIME('now')), Location=:branch WHERE ItemId=:id;
 EOF_SQL;
 	$stmt = $db->prepare($sql);
 	$stmt->bindValue(':id', $item, SQLITE3_INTEGER);
