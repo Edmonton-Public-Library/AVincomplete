@@ -88,7 +88,7 @@ sub usage()
 	usage: $0 [-CdfuUx] [-D<foo.bar>]
 Creates and manages av incomplete sqlite3 database.
 
- -c: Create new table of EPL-AVSNAG cards. These are the cards used to checkout 
+ -c: Refreshes the avsnagcards table of EPL-AVSNAG cards. These are the cards used to checkout 
      materials and place holds.
  -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
  -d: Debug.
@@ -184,6 +184,54 @@ END_SQL
 		{
 			print STDERR "rejecting item '$itemId' branch '$location'\n";
 		}
+	}
+	$DBH->disconnect;
+}
+
+# Updates a staff entered record in the AV incomplete database.
+# param:  Lines of data to store: 
+#         '31221102616518  |CHECKEDOUT|Pride and prejudice|535652|21221021851248|Smith, Merlin|780-244-5655|xxxxxxxx@hotmail.com|'
+# return: none.
+sub updateNewItems( $ )
+{
+	$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
+		PrintError       => 0,
+		RaiseError       => 1,
+		AutoCommit       => 1,
+		FetchHashKeyName => 'NAME_lc',
+	});
+	# Now start importing data.
+	my $line = shift;
+	print "\n\n$line\n\n";
+	my($itemId, $currentLocation, $title, $userKey, $userId, $name, $phone, $email) = split( '\|', $line );
+	if ( defined $itemId )
+	{
+		$itemId   = trim( $itemId );
+		$userKey  = trim( $userKey );
+		$userId   = trim( $userId );
+		if ( $userId !~ m/\d{13,}/ )
+		{
+			$name = 'N/A';
+			$phone= 'N/A';
+			$email= 'N/A';
+		}
+		$title    = trim( $title );
+		$name     = trim( $name );
+		$phone    = trim( $phone );
+		$email    = trim( $email );
+		print STDERR "adding item '$itemId' currently in '$currentLocation'\n";
+
+		# 31221106301570  |CLV-AVINCOMPLETE|Call of duty|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
+		# print "$itemId, '$currentLocation', '$title', $userKey, $userId, '$name', '$phone', '$email'\n";
+		$SQL = <<"END_SQL";
+UPDATE avincomplete SET Title=?, UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
+WHERE ItemId=?
+END_SQL
+		$DBH->do($SQL, undef, $title, $userKey, $userId, $name, $phone, $email, 1, $DATE, $itemId);
+	}
+	else
+	{
+		print STDERR "update rejecting item '$itemId'\n";
 	}
 	$DBH->disconnect;
 }
@@ -329,10 +377,29 @@ sub init
 		my @data = split '\n', $apiResults;
 		while (@data)
 		{
-			my $barCode = shift @data;
-			print `echo "$barCode|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oCBm'`;
+			my $itemId = shift @data;
+			my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oCBm'`;
+			# catkey|item id         |currlocation|
 			# 875883|31221098551174  |HOLDS|
+			# 875994|31221098123457  |CHECKEDOUT|
 			# **error number 111 on item start, cat=0 seq=0 copy=0 id=31221099948528
+			# if the item is checked out, staff probably have the non-rfid part of the item, since it is 
+			# likely that it came in through a sorter or a smart chute, or handed to staff, what ever.
+			# we want to get the information for the current customer.
+			my @field = split( '\|', $locationCheck );
+			if ( defined $field[2] and $field[2] eq "CHECKEDOUT" ) # item still on user's card...
+			{
+				# echo 31221098551174 | selitem -iB -oI | selcharge -iI -oU | seluser -iU -oBD
+				my $apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oI | selcharge -iI -oIU | selitem -iI -oCSBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`;
+				# 31221098551174  |CHECKEDOUT|Putumayo presents Latin reggae [sound recording]|185461|21221019003992|Nisbet ITS STAFF, Andrew|780-496-5108|anisbet@epl.ca|
+				# print $apiUpdate;
+				updateNewItems( $apiUpdate );
+			}
+			else
+			{
+				# if its current location is not checked out we need to get the previous customer's information
+				# like we did with -U
+			}
 		}
 		exit;
 	} # End of '-u' switch handling.
