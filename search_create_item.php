@@ -34,7 +34,17 @@
   </div>
 </nav>
 <div class='container-fluid'>
-	<h2 class='sub-header'>Search results:</h2>
+	<div class="col-sm-7">
+	<h2 class="sub-header">Search results:</h2>
+	<div class='row'>
+		<div class='col-md-2'>
+			<p/>
+		</div>
+		<div class='col-md-4'>
+	
+	
+	
+	
 <?php
 ini_set('error_reporting', E_ALL);
 require 'db.inc';
@@ -98,9 +108,43 @@ echo "</a></p>";
 $db->close();
 ?>
 
+		</div> <!-- 2nd column -->
+	</div> <!-- columns -->
 </div> <!-- container -->
+<!-- Modal dialog box -->
+<div class='modal fade bs-example-modal-lg' tabindex='-1' role='dialog' aria-labelledby='myLargeModalLabel' aria-hidden='true'>
+  <div class='modal-dialog modal-sm'>
+    <div class='modal-content'>
+      <div class='modal-header'>
+         <button type='button' class='close' data-dismiss='modal' aria-label='Close'><span aria-hidden='true'>&times;</span></button>
+            <h4 class='modal-title'>Info</h4>
+         </div>
+         <div class='modal-body'>
+            <p id='info-dialog'>Oops, you shouldn't be seeing this</p>
+        </div>
+        <div class='modal-footer'>
+            <button type='button' class='btn btn-default' data-dismiss='modal'>Close</button>
+        </div>
+    </div>
+  </div>
+</div>
+<!-- end of Modal dialog box -->
 <script>
-
+$(document).ready(function(){
+	// Handles all the actions related to displaying information in the modal dialogue box.
+	$("a.av-button").click(function(){
+        // $("#info-dialog").load("demo_test.txt");
+		itemId = $(this).attr('item_id');
+		branch = $(this).attr('branch');
+		myAction = $(this).attr('my-action');
+        $("#info-dialog").load(
+			"functions.php?action=" + myAction + "&item_id=" + itemId + "&branch=" + branch, 
+			function(responseTxt, statusTxt, xhr){
+				if(statusTxt == "error")
+					$("#info-dialog").text("Error: " + xhr.status + ": " + xhr.statusText);
+		});
+    });
+});
 </script>
 </body>
 </html>

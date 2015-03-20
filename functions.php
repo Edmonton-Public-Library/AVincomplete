@@ -181,7 +181,7 @@ EOF_SQL;
 # return: true if it worked and false otherwise.
 function create_new_item(&$db, $item, $branch)
 {
-	$title = "bogus title";
+	$title = "(title will be updated shortly)";
 	// sqlite> .schema
 	// TABLE avincomplete (
 	// ItemId INTEGER PRIMARY KEY NOT NULL,
