@@ -378,7 +378,6 @@ sub init
 		{
 			my $itemId = shift @data;
 			my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oICBm | selcharge -iI -oUS | seluser -iU -oSB'`;
-			print "\n\n\n location check: '$locationCheck'\n\n\n";
 			# catkey|item id         |currlocation| current user bar code |
 			# 875883|31221098551174  |CHECKEDOUT|21221019003992|
 			# **error number 111 on item start, cat=0 seq=0 copy=0 id=31221099948528
@@ -386,12 +385,11 @@ sub init
 			# likely that it came in through a sorter or a smart chute, or handed to staff, what ever.
 			# we want to get the information for the current customer.
 			my @field = split( '\|', $locationCheck );
+			my $apiUpdate = '';
 			if ( defined $field[2] and $field[2] eq "CHECKEDOUT" and $field[3] =~ m/\d{10,}/ ) # item still on user's card...
 			{
 				# echo 31221098551174 | selitem -iB -oI | selcharge -iI -oU | seluser -iU -oBD
-				my $apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oI | selcharge -iI -oIU | selitem -iI -oCSBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`;
-				# 31221098551174  |CHECKEDOUT|Putumayo presents Latin reggae [sound recording]|185461|21221019003992|Nisbet ITS STAFF, Andrew|780-496-5108|anisbet@epl.ca|
-				updateNewItems( $apiUpdate );
+				$apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oI | selcharge -iI -oIU | selitem -iI -oCSBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`;
 			}
 			else # We need the previous user's information.
 			{
@@ -401,11 +399,11 @@ sub init
 				# selitem -iI -oCsBS # Takes item id and outputs cat key previous user (PU) key and item's barcode.
 				# selcatalog -iC -oSt # Takes the cat key and outputs everything so far and the title.
 				# seluser -iU -oSUBDX.9026.X.9007. # Gets the user's key which is first on the output from above and looks up contact info PHONE and EMAIL.
-				my $apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oCsBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`;
-				print "\n\n$apiUpdate\n\n";
-				# 31221098551174  |CHECKEDOUT|Putumayo presents Latin reggae [sound recording]|185461|21221019003992|Nisbet ITS STAFF, Andrew|780-496-5108|anisbet@epl.ca|
-				updateNewItems( $apiUpdate );
+				$apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oCsBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`;
 			}
+			# 31221098551174  |CHECKEDOUT|Putumayo presents Latin reggae [sound recording]|185461|21221019003992|Nisbet ITS STAFF, Andrew|780-496-5108|anisbet@epl.ca|
+			updateNewItems( $apiUpdate );
+			# and place the item on hold for the av snag card at t
 		}
 		exit;
 	} # End of '-u' switch handling.
