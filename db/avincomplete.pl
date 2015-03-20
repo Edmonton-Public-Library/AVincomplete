@@ -88,6 +88,8 @@ sub usage()
 	usage: $0 [-CdfuUx] [-D<foo.bar>]
 Creates and manages av incomplete sqlite3 database.
 
+ -c: Create new table of EPL-AVSNAG cards. These are the cards used to checkout 
+     materials and place holds.
  -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
  -d: Debug.
  -D<file>: Dump hold table to HTML file <file>.
@@ -186,12 +188,38 @@ END_SQL
 	$DBH->disconnect;
 }
 
+# Inserts av snag cards into the  incomplete table.
+# param:  user key integer.
+# param:  user id string.
+# param:  branch string.
+# return: none.
+sub insertAvSnagCard( $$$ )
+{
+	my $userKey = shift;
+	my $userId  = shift;
+	my $branch  = shift;
+$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
+	PrintError       => 0,
+	RaiseError       => 1,
+	AutoCommit       => 1,
+	FetchHashKeyName => 'NAME_lc',
+});
+	$SQL = <<"END_SQL";
+INSERT OR IGNORE INTO avsnagcards 
+(UserKey, UserId, Branch) 
+VALUES 
+(?, ?, ?)
+END_SQL
+	$DBH->do($SQL, undef, $userKey, $userId, $branch);
+	$DBH->disconnect;
+}
+
 # Creates the AV incomplete table.
 # param:  none.
 # return: none.
-sub createTable()
+sub createAvIncompleteTable()
 {
-	$DBH      = DBI->connect($DSN, $USER, $PASSWORD, {
+	$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
 	   PrintError       => 0,
 	   RaiseError       => 1,
 	   AutoCommit       => 1,
@@ -226,31 +254,62 @@ END_SQL
 	$DBH->disconnect;
 }
 
+# Creates the AV incomplete table.
+# param:  none.
+# return: none.
+sub createAvSnagCardsTable()
+{
+	$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
+	   PrintError       => 0,
+	   RaiseError       => 1,
+	   AutoCommit       => 1,
+	   FetchHashKeyName => 'NAME_lc',
+	});
+	# AV snag cards ids are never digits, more like MNA-AVSNAG
+	$SQL = <<"END_SQL";
+CREATE TABLE avsnagcards (
+	UserKey INTEGER PRIMARY KEY NOT NULL,
+	UserId CHAR(20) NOT NULL,
+	Branch CHAR(6) NOT NULL
+);
+END_SQL
+	$DBH->do($SQL);
+	$DBH->disconnect;
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
 sub init
 {
-    my $opt_string = 'CdD:fuUx';
+    my $opt_string = 'cCdD:fuUx';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	# Create new sqlite database.
 	if ( $opt{'C'} ) 
 	{
-		if ( -e $DB_FILE and ! $opt{'f'} )
+		if ( -e $DB_FILE )
 		{
-			print STDERR "**error: db '$DB_FILE' exists. If you want to overwrite use '-f' flag.\n";
+			if ( $opt{'f'} )
+			{
+				# Just dropping the table preserves the ownership by www-data.
+				`echo "DROP TABLE avincomplete;" | sqlite3 $DB_FILE`;
+				createAvIncompleteTable();
+				`echo "DROP TABLE avsnagcards;" | sqlite3 $DB_FILE`;
+				createAvSnagCardsTable();
+			}
+			else
+			{
+				print STDERR "**error: db '$DB_FILE' exists. If you want to overwrite use '-f' flag.\n";
+			}
 			exit;
 		}
-		else
-		{
-			unlink $DB_FILE;
-		}
-		createTable();
+		createAvIncompleteTable();
 		# Set permissions so the eventual owner (www-data) and ilsdev account
 		# can cron maintenance.
 		my $mode = 0664;
 		chmod $mode, $DB_FILE;
+		print STDERR "** IMPORTANT **: don't forget to change ownership to www-data or it will remain locked to user edits.\n";
 		exit;
 	}
 	if ( $opt{'D'} ) 
@@ -267,7 +326,14 @@ sub init
 	if ( $opt{'u'} )
 	{
 		my $apiResults = `echo 'SELECT ItemId FROM avincomplete WHERE Processed=0;' | sqlite3 $DB_FILE`;
-		`echo "$apiResults" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oCBm'`;
+		my @data = split '\n', $apiResults;
+		while (@data)
+		{
+			my $barCode = shift @data;
+			print `echo "$barCode|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oCBm'`;
+			# 875883|31221098551174  |HOLDS|
+			# **error number 111 on item start, cat=0 seq=0 copy=0 id=31221099948528
+		}
 		exit;
 	} # End of '-u' switch handling.
 	# Update database from AVSNAG profile cards, inserts new records or ignores if it's already there.
@@ -287,8 +353,52 @@ sub init
 		# -- snip --
 		insertNewItems( $apiResults );
 		# Since all these items came from the AVSNAGs cards across the library they don't need to charged or discharged.
+		# We still want to place a hold for the item if it gets trapped by a sorter or smart chute.
+		# placeHoldsOnItems( $apiResults );
 		exit;
 	} # End of '-U' switch handling.
+	if ( $opt{'c'} ) # Create table of system cards for holds and checkouts.
+	{
+		my $apiResults = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL-AVSNAG" -oUB'`;
+		# which produces:
+		# ...
+		# 836641|DLI-SNAGS|
+		# 1081444|MNA-AVINCOMPLETE|
+		# 1096665|21221022952235|
+		# ...
+		$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
+			PrintError       => 0,
+			RaiseError       => 1,
+			AutoCommit       => 1,
+			FetchHashKeyName => 'NAME_lc',
+		});
+		my @data = split '\n', $apiResults;
+		while (@data)
+		{
+			my $line = shift @data;
+			my ( $userKey, $userId ) = split( '\|', $line );
+			# get rid of the extra white space on the line
+			$userId = trim( $userId );
+			if ( $userId =~ m/\d{13,}/ )
+			{
+				next;
+			}
+			# This is brittle, but it seems that most cards are named by branch as the first 3 characters.
+			# If that holds lets get them now.
+			my $branch = substr( $userId, 0, 3 );
+			$SQL = <<"END_SQL";
+INSERT OR IGNORE INTO avsnagcards (UserKey, UserId, Branch) VALUES (?, ?, ?)
+END_SQL
+			$DBH->do( $SQL, undef, $userKey, $userId, $branch );
+			# Now try an update user keys that are already in there but out of date (Name changed).
+			$SQL = <<"END_SQL";
+UPDATE avsnagcards SET UserId=?, Branch=? 
+WHERE UserKey=?
+END_SQL
+			$DBH->do($SQL, undef, $userKey, $userId, $branch );
+		}
+		$DBH->disconnect();
+	}
 }
 
 init();
