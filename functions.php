@@ -64,7 +64,7 @@ function get_customer_info(&$db, $item)
 	$ret = $db->query($sql);
 	$output = '';
 	while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
-		$output = 'bar code: '. $row['UserId'].'<br/>name: '.$row['UserName'].
+		$output = 'User ID: '. $row['UserId'].'<br/>name: '.$row['UserName'].
 		'<br/>phone: '.$row['UserPhone'].'<br/>email: <a href="mailto:'.$row['UserEmail'].'?Subject=Item borrowed from EPL: '.$row['Title'].'." target="_top">'.$row['UserEmail'].'</a>';
 	}
 	$db->close();

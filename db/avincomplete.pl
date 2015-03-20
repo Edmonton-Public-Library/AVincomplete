@@ -403,7 +403,21 @@ sub init
 			}
 			# 31221098551174  |CHECKEDOUT|Putumayo presents Latin reggae [sound recording]|185461|21221019003992|Nisbet ITS STAFF, Andrew|780-496-5108|anisbet@epl.ca|
 			updateNewItems( $apiUpdate );
-			# and place the item on hold for the av snag card at t
+			# and place the item on hold for the av snag card at the correct branch.
+			# Get the branch's snag card.
+			my $branchCard = `echo "select UserId from avsnagcards where Branch = (select Location from avincomplete where ItemId=$itemId);" | sqlite3 $DB_FILE`;
+			chomp( $branchCard );
+			if ( $branchCard ne '' )
+			{
+				print "\n\n\n Branch card: '$branchCard' \n\n\n";
+				# does a hold exist for this item on this card?
+				# `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -B 21221012345678'`;
+				# `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -B 21221012345678 -U'`;
+			}
+			else
+			{
+				print STDERR "* warn: couldn't find a branch card because the branch name was empty on item '$itemId'\n";
+			}
 		}
 		exit;
 	} # End of '-u' switch handling.
