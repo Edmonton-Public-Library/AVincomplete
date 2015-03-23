@@ -24,7 +24,7 @@
 #   b) find the last date
 #
 # Finds and reports last users of AVIncomplete items and prints their addresses.
-#    Copyright (C) 2013  Andrew Nisbet
+#    Copyright (C) 2015  Andrew Nisbet
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
-#          0.0 - Dev. 
+#          0.1 - Dev. 
 #
 ####################################################
 
@@ -89,13 +89,16 @@ sub usage()
 Creates and manages av incomplete sqlite3 database.
 
  -c: Refreshes the avsnagcards table of EPL-AVSNAG cards. These are the cards used to checkout 
-     materials and place holds.
+     materials and place holds. Can safely be run regularly. AV incomplete cards themselves
+     don't change all that often, but if a new one is added this should be run.
  -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
  -d: Debug.
  -D<file>: Dump hold table to HTML file <file>.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
  -u: Updates database based on items entered into the database by the website
- -U: Updates database based on items on cards with $AVSNAG profile.
+ -U: Updates database based on items on cards with $AVSNAG profile. Safe to run anytime,
+     but should be run with a frequency that is inversely proportional to the amount of
+     time staff are servicing AV incomplete.
  -x: This (help) message.
 
 example: 
@@ -410,9 +413,19 @@ sub init
 			if ( $branchCard ne '' )
 			{
 				print "\n\n\n Branch card: '$branchCard' \n\n\n";
-				# does a hold exist for this item on this card?
-				# `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -B 21221012345678'`;
-				# `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -B 21221012345678 -U'`;
+				# TODO: does a hold exist for this item on this card? If there is no hold it will return nothing.
+				# echo ABB-AVINCOMPLETE | seluser -iB | selhold -iU -oI | selitem -iI -oB | grep $itemId # will output all the ids 
+				my $hold = `echo "$branchCard|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | seluser -iB | selhold -iU -oI | selitem -iI -oB | grep $itemId'`; # will output all the ids 
+				if ( $hold eq '' )
+				{
+					# `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -B"$branchCard"'`;
+					`echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -B"$branchCard" -U'`;
+					print STDERR "Ok: copy hold place on item '$itemId' for '$branchCard'.\n";
+				}
+				else
+				{
+					print STDERR "'$itemId' already on hold for '$branchCard'.\n";
+				}
 			}
 			else
 			{
@@ -464,10 +477,9 @@ sub init
 			my ( $userKey, $userId ) = split( '\|', $line );
 			# get rid of the extra white space on the line
 			$userId = trim( $userId );
-			if ( $userId =~ m/\d{13,}/ )
-			{
-				next;
-			}
+			# if this user id doesn't match your library's library card format (in our case codabar)
+			# ignore it. It is probably a system card.
+			next if ( $userId =~ m/\d{13,}/ );
 			# This is brittle, but it seems that most cards are named by branch as the first 3 characters.
 			# If that holds lets get them now.
 			my $branch = substr( $userId, 0, 3 );

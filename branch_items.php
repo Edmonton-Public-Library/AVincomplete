@@ -58,11 +58,11 @@
 			<div class='col-sm-2 cell list-group-item active'>Item ID&nbsp;<a id='item_id' href='#' title='sort'><img src='images/sort.gif' /></a></div>
 			<div class='col-sm-3 cell list-group-item active'>Title&nbsp;<a id='title' href='#' title='sort'><img src='images/sort.gif' /></a></div>
 			<div class='col-sm-1 cell list-group-item active'>Date&nbsp;<a id='date' href='#' title='sort'><img src='images/sort.gif' /></a></div>
-			<div class='col-sm-1 cell list-group-item active'>Discard</div>
-			<div class='col-sm-1 cell list-group-item active'>Complete</div>
-			<div class='col-sm-1 cell list-group-item active'>Contact</div>
 			<div class='col-sm-1 cell list-group-item active'>Comments</div>
 			<div class='col-sm-1 cell list-group-item active'>Customer</div>
+			<div class='col-sm-1 cell list-group-item active'>Contact</div>
+			<div class='col-sm-1 cell list-group-item active'>Complete</div>
+			<div class='col-sm-1 cell list-group-item active'>Discard</div>
 		</div>
 <?php 
 ini_set('error_reporting', E_ALL);
@@ -124,25 +124,24 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	echo "      <div class='col-sm-2 cell list-group-item'>" . $row['ItemId'] . "</div>";
 	echo "      <div class='col-sm-3 cell list-group-item'>" . $row['Title'] . "</div>";
 	echo "      <div class='col-sm-1 cell list-group-item'>" . $row['CreateDate'] . "</div>";
-// TODO Fix so buttons are dynamically set to their values in the database.
-	if ($row['Discard'] == 1){
-		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='discard' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-trash'></span></button></a></div>";
+	# TODO add function to bring up a modal data entry window for comments.
+	echo "      <div class='col-sm-1 cell list-group-item'><a class='comments' my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-pencil'></span></button></a></div>";
+	echo "      <div class='col-sm-1 cell list-group-item'><a class='info' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-question-sign'></span></button></a></div>";
+	if ($row['Contact'] == 1){
+		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-earphone'></span>?</button></a></div>";
 	} else {
-		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='discard' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-trash'></span></button></a></div>";
+		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-earphone'></span>?</button></a></div>";
 	}
 	if ($row['Complete'] == 1){
-		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='complete' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-ok'></span></button></a></div>";
+		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='complete' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-ok'></span></button></a></div>";
 	} else {
-		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='complete' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-ok'></span></button></a></div>";
+		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='complete' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-ok'></span></button></a></div>";
 	}
-	if ($row['Contact'] == 1){
-		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='contact' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-earphone'></span></button></a></div>";
+	if ($row['Discard'] == 1){
+		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='discard' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-trash'></span></button></a></div>";
 	} else {
-		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='contact' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-earphone'></span></button></a></div>";
+		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='discard' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-trash'></span></button></a></div>";
 	}
-	# TODO add function to bring up a modal data entry window for comments.
-	echo "      <div class='col-sm-1 cell list-group-item'><a class='comments' my-action='comments' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-pencil'></span></button></a></div>";
-	echo "      <div class='col-sm-1 cell list-group-item'><a class='info' href='#' item_id='".$itemId."' branch='".$branch."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-question-sign'></span></button></a></div>";
 	echo "  </div>";
 	$ran++;
 }
