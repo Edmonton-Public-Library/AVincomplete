@@ -24,7 +24,7 @@
 #   b) find the last date
 #
 # Finds and reports last users of AVIncomplete items and prints their addresses.
-#    Copyright (C) 2015  Andrew Nisbet
+#    Copyright (C) 2015  Andrew Nisbet, Edmonton Public Library.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -42,6 +42,8 @@
 # MA 02110-1301, USA.
 #
 # Author:  Andrew Nisbet, Edmonton Public Library
+# Dependencies: seluser, selitem, selcatalog, selhold, selcharge, chargeitems.pl
+#               createholds.pl, chargeitems.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
 #          0.1 - Dev. 
@@ -87,13 +89,17 @@ sub usage()
 
 	usage: $0 [-CdfuUx] [-D<foo.bar>]
 Creates and manages av incomplete sqlite3 database.
+Note: -c and -d flags rebuild the avsnag cards and discard cards for a branch based on 
+profiles. The branch id must appear as the first 3 letters of its name like: SPW-AVSNAG, or
+RIV-DISCARD, for a discard card.
 
  -c: Refreshes the avsnagcards table of EPL-AVSNAG cards. These are the cards used to checkout 
      materials and place holds. Can safely be run regularly. AV incomplete cards themselves
-     don't change all that often, but if a new one is added this should be run.
+     don't change all that often, but if a new one is added this should be run. See '-d'
+     for discard cards.
  -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
  -d: Refreshes the avdiscardcards table of DISCARD cards. Can safely be run regularly especially
-     if a new branch discard card is added.
+     if a new branch discard card is added. See '-c' for avsnag cards.
  -D<file>: Dump hold table to HTML file <file>.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
  -u: Updates database based on items entered into the database by the website
@@ -378,6 +384,49 @@ END_SQL
 	$DBH->disconnect;
 }
 
+# Places a hold for a given item. The item is checked in the local db, it's location
+# determined, then the avsnag card is found for the branch, then a hold is placed for 
+# the avsnag card's owning library.
+# param:  item ID.
+# return: <none>
+sub placeHoldForItem( $ )
+{
+	my ($itemId) = shift;
+	# Get the branch's snag card.
+	my $branchCard = `echo "select UserId from avsnagcards where Branch = (select Location from avincomplete where ItemId=$itemId);" | sqlite3 $DB_FILE`;
+	my $branch     = `echo "select Location from avincomplete where ItemId=$itemId;" | sqlite3 $DB_FILE`;
+	chomp( $branchCard );
+	chomp( $branch );
+	if ( $branchCard ne '' )
+	{
+		print "\n\n\n Branch card: '$branchCard' \n\n\n";
+		# Does a hold exist for this item on this card? If there is no hold it will return nothing.
+		# echo ABB-AVINCOMPLETE | seluser -iB | selhold -iU -oI | selitem -iI -oB | grep $itemId # will output all the ids 
+		my $hold = `echo "$branchCard|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | seluser -iB | selhold -iU -oI | selitem -iI -oB | grep $itemId'`; # will output all the ids 
+		if ( $hold eq '' )
+		{
+			if ( $branch ne '' )
+			{
+				# `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -B"$branchCard"'`;
+				`echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -l"EPL$branch" -B"$branchCard" -U'`;
+				print STDERR "Ok: copy hold place on item '$itemId' for '$branchCard'.\n";
+			}
+			else # Couldn't find the branch for this avsnag card.
+			{
+				print STDERR "Couldn't find the branch for '$branchCard' for '$itemId'.\n";
+			}
+		}
+		else # Hold already exists on card for identified branch.
+		{
+			print STDERR "'$itemId' already on hold for '$branchCard'.\n";
+		}
+	}
+	else # Branch card not found for requested branch.
+	{
+		print STDERR "* warn: couldn't find a branch card because the branch name was empty on item '$itemId'\n";
+	}
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
@@ -445,7 +494,7 @@ sub init
 			if ( defined $field[2] and $field[2] eq "CHECKEDOUT" and $field[3] =~ m/\d{10,}/ ) # item still on user's card...
 			{
 				# echo 31221098551174 | selitem -iB -oI | selcharge -iI -oU | seluser -iU -oBD
-				$apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oI | selcharge -iI -oIU | selitem -iI -oCSBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`;
+				$apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oI | selcharge -iI -oIU | selitem -iI -oCSBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`; 
 			}
 			else # We need the previous user's information.
 			{
@@ -460,30 +509,7 @@ sub init
 			# 31221098551174  |CHECKEDOUT|Putumayo presents Latin reggae [sound recording]|185461|21221019003992|Nisbet ITS STAFF, Andrew|780-496-5108|anisbet@epl.ca|
 			updateNewItems( $apiUpdate );
 			# and place the item on hold for the av snag card at the correct branch.
-			# Get the branch's snag card.
-			my $branchCard = `echo "select UserId from avsnagcards where Branch = (select Location from avincomplete where ItemId=$itemId);" | sqlite3 $DB_FILE`;
-			chomp( $branchCard );
-			if ( $branchCard ne '' )
-			{
-				print "\n\n\n Branch card: '$branchCard' \n\n\n";
-				# TODO: does a hold exist for this item on this card? If there is no hold it will return nothing.
-				# echo ABB-AVINCOMPLETE | seluser -iB | selhold -iU -oI | selitem -iI -oB | grep $itemId # will output all the ids 
-				my $hold = `echo "$branchCard|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | seluser -iB | selhold -iU -oI | selitem -iI -oB | grep $itemId'`; # will output all the ids 
-				if ( $hold eq '' )
-				{
-					# `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -B"$branchCard"'`;
-					`echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -B"$branchCard" -U'`;
-					print STDERR "Ok: copy hold place on item '$itemId' for '$branchCard'.\n";
-				}
-				else
-				{
-					print STDERR "'$itemId' already on hold for '$branchCard'.\n";
-				}
-			}
-			else # Branch card not found for requested branch.
-			{
-				print STDERR "* warn: couldn't find a branch card because the branch name was empty on item '$itemId'\n";
-			}
+			placeHoldForItem( $itemId );
 		}
 		exit;
 	} # End of '-u' switch handling.

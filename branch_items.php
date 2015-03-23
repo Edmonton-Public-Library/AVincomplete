@@ -48,6 +48,12 @@
 			}
 		} 
 	?></h2>
+	
+	
+	<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#commentsModal" data-whatever="@mdo">Open modal for @mdo</button>
+	
+	
+	
 <!--
 <form action='index.php'>
 <input type='submit' value='back'>
@@ -125,7 +131,7 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	echo "      <div class='col-sm-3 cell list-group-item'>" . $row['Title'] . "</div>";
 	echo "      <div class='col-sm-1 cell list-group-item'>" . $row['CreateDate'] . "</div>";
 	# TODO add function to bring up a modal data entry window for comments.
-	echo "      <div class='col-sm-1 cell list-group-item'><a class='comments' my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-pencil'></span></button></a></div>";
+	echo "      <div class='col-sm-1 cell list-group-item'><a class='comments' my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#commentsModal' data-whatever='@mdo'><span class='glyphicon glyphicon-pencil'></span></button></a></div>";
 	echo "      <div class='col-sm-1 cell list-group-item'><a class='info' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-question-sign'></span></button></a></div>";
 	if ($row['Contact'] == 1){
 		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-earphone'></span>?</button></a></div>";
@@ -177,6 +183,30 @@ if ($ran == 0){
   </div>
 </div>
 <!-- end of Modal dialog box -->
+<!-- Begin modal text box -->
+<div class="modal fade" id="commentsModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="exampleModalLabel">Notes</h4>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="form-group">
+            <label for="message-text" class="control-label">Comments:</label>
+            <textarea class="form-control" id="message-text"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button id='save-comments' type="button" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- End modal text box -->
 <script>
 var stickyOffset = $('.sticky').offset().top;
 
@@ -191,6 +221,9 @@ $(window).scroll(function(){
 
 var isDescending = false;
 $(document).ready(function(){
+	// Handles comments modal dialog box.
+	
+	
 	// Handles all the actions related to displaying information in the modal dialogue box.
 	$("a.av-button").click(function(){
         // $("#info-dialog").load("demo_test.txt");
