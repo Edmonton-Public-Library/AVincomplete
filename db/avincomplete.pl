@@ -92,7 +92,8 @@ Creates and manages av incomplete sqlite3 database.
      materials and place holds. Can safely be run regularly. AV incomplete cards themselves
      don't change all that often, but if a new one is added this should be run.
  -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
- -d: Debug.
+ -d: Refreshes the avdiscardcards table of DISCARD cards. Can safely be run regularly especially
+     if a new branch discard card is added.
  -D<file>: Dump hold table to HTML file <file>.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
  -u: Updates database based on items entered into the database by the website
@@ -264,6 +265,32 @@ END_SQL
 	$DBH->disconnect;
 }
 
+# Inserts av discard cards into the avincomplete.db database avdiscardcards table.
+# param:  user key integer.
+# param:  user id string.
+# param:  branch string.
+# return: none.
+sub insertAvDiscardCard( $$$ )
+{
+	my $userKey = shift;
+	my $userId  = shift;
+	my $branch  = shift;
+$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
+	PrintError       => 0,
+	RaiseError       => 1,
+	AutoCommit       => 1,
+	FetchHashKeyName => 'NAME_lc',
+});
+	$SQL = <<"END_SQL";
+INSERT OR IGNORE INTO avdiscardcards 
+(UserKey, UserId, Branch) 
+VALUES 
+(?, ?, ?)
+END_SQL
+	$DBH->do($SQL, undef, $userKey, $userId, $branch);
+	$DBH->disconnect;
+}
+
 # Creates the AV incomplete table.
 # param:  none.
 # return: none.
@@ -327,6 +354,30 @@ END_SQL
 	$DBH->disconnect;
 }
 
+# Creates the AV incomplete discard cards table. This is where the branch's 
+# discard cards are going to be stored.
+# param:  none.
+# return: none.
+sub createAvDiscardCardsTable()
+{
+	$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
+	   PrintError       => 0,
+	   RaiseError       => 1,
+	   AutoCommit       => 1,
+	   FetchHashKeyName => 'NAME_lc',
+	});
+	# AV snag cards ids are never digits, more like MNA-AVSNAG
+	$SQL = <<"END_SQL";
+CREATE TABLE avdiscardcards (
+	UserKey INTEGER PRIMARY KEY NOT NULL,
+	UserId CHAR(20) NOT NULL,
+	Branch CHAR(6) NOT NULL
+);
+END_SQL
+	$DBH->do($SQL);
+	$DBH->disconnect;
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
@@ -347,6 +398,8 @@ sub init
 				createAvIncompleteTable();
 				`echo "DROP TABLE avsnagcards;" | sqlite3 $DB_FILE`;
 				createAvSnagCardsTable();
+				`echo "DROP TABLE avdiscardcards;" | sqlite3 $DB_FILE`;
+				createAvDiscardCardsTable();
 			}
 			else
 			{
@@ -427,7 +480,7 @@ sub init
 					print STDERR "'$itemId' already on hold for '$branchCard'.\n";
 				}
 			}
-			else
+			else # Branch card not found for requested branch.
 			{
 				print STDERR "* warn: couldn't find a branch card because the branch name was empty on item '$itemId'\n";
 			}
@@ -495,7 +548,49 @@ END_SQL
 			$DBH->do($SQL, undef, $userKey, $userId, $branch );
 		}
 		$DBH->disconnect();
-	}
+	} # end of if '-c' processing.
+	if ( $opt{'d'} ) # Create table of system cards for discards.
+	{
+		my $apiResults = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"DISCARD" -oUB'`;
+		# which produces:
+		# ...
+		# 1123293|CLV-DISCARD-NOV|
+		# 1123294|CLV-DISCARD-DEC|
+		# 1126170|WMC-DISCARD-DEC2|
+		# 1133749|21221023754002|
+		# ...
+		$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
+			PrintError       => 0,
+			RaiseError       => 1,
+			AutoCommit       => 1,
+			FetchHashKeyName => 'NAME_lc',
+		});
+		my @data = split '\n', $apiResults;
+		while (@data)
+		{
+			my $line = shift @data;
+			my ( $userKey, $userId ) = split( '\|', $line );
+			# get rid of the extra white space on the line
+			$userId = trim( $userId );
+			# if this user id doesn't match your library's library card format (in our case codabar)
+			# ignore it. It is probably a system card.
+			next if ( $userId =~ m/\d{4,}/ );
+			# This is brittle, but it seems that most cards are named by branch as the first 3 characters.
+			# If that holds lets get them now.
+			my $branch = substr( $userId, 0, 3 );
+			$SQL = <<"END_SQL";
+INSERT OR IGNORE INTO avdiscardcards (UserKey, UserId, Branch) VALUES (?, ?, ?)
+END_SQL
+			$DBH->do( $SQL, undef, $userKey, $userId, $branch );
+			# Now try an update user keys that are already in there but out of date (Name changed).
+			$SQL = <<"END_SQL";
+UPDATE avdiscardcards SET UserId=?, Branch=? 
+WHERE UserKey=?
+END_SQL
+			$DBH->do($SQL, undef, $userKey, $userId, $branch );
+		}
+		$DBH->disconnect();
+	} # end of -d processing (discard cards for a branch.
 }
 
 init();
