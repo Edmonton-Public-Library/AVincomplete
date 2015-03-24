@@ -217,6 +217,46 @@ EOF_SQL;
 }
 
 ###
+# Adds a comment to an item.
+# 
+# param:  $db - database object.
+# param:  $item - the item id of the item to be created.
+# param:  $branch - branch that currently has the first item. We DO NOT want to shuffle stuff
+#         around the library to match it up. The branch that finds the first piece of an AV incomplete
+#         is the owning library.
+# param:  $comment - the string to add to the database.
+# return: true if it worked and false otherwise.
+function add_comments(&$db, $item, $branch, $comment){
+	// if (strlen($comment) > 255){
+		// return false;
+	// }
+	// sqlite> .schema
+	// TABLE avincomplete (
+	// ItemId INTEGER PRIMARY KEY NOT NULL,
+	// Title CHAR(256),
+	// CreateDate DATE DEFAULT CURRENT_DATE,
+	// UserKey INTEGER,
+	// Contact INTEGER DEFAULT 0,
+	// ContactDate DATE DEFAULT NULL,
+	// Complete INTEGER DEFAULT 0,
+	// CompleteDate DATE DEFAULT NULL,
+	// Discard  INTEGER DEFAULT 0,
+	// DiscardDate DATE DEFAULT NULL,
+	// Location CHAR(6) NOT NULL,
+	// Comments CHAR(256)
+	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
+	$sql = <<<EOF_SQL
+UPDATE avincomplete SET Comments=:comment WHERE ItemId=:id
+EOF_SQL;
+	$stmt = $db->prepare($sql);
+	$stmt->bindValue(':comment', $comment, SQLITE3_TEXT);
+	$stmt->bindValue(':id', $item, SQLITE3_INTEGER);
+	$result = $stmt->execute();
+	$db->close();
+	return true;
+}
+
+###
 # Entry point for all GET requests to this page.
 # mark item complete: action=complete&item_id=$item&branch=$branch
 # create new item:    action=create&item_id=$item&branch=$branch
@@ -235,6 +275,17 @@ if (! empty($_GET)) {
 				echo "Item <kbd>$item</kbd> marked as complete, well done.";
 			} else {
 				$msg = "Function '" . $_GET['action'] . "' failed in functions.php.";
+				header("Location:error.php?msg=$msg");
+			}
+		} elseif ($_GET['action'] === 'comments'){ # Comment on an item in database.
+			if (! empty($_GET['data'])){
+				$commentData = $_GET['data'];
+				if (! add_comments($db, $item, $branch, $commentData)){
+					$msg = "Function '" . $_GET['action'] . "' failed, comment too long.";
+					header("Location:error.php?msg=$msg");
+				}
+			} else {
+				$msg = "Function '" . $_GET['action'] . "' failed in functions.php expected comment data but got none.";
 				header("Location:error.php?msg=$msg");
 			}
 		} elseif ($_GET['action'] === 'create'){ # Create a new entry (or register) item in database.

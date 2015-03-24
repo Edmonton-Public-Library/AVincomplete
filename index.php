@@ -59,11 +59,6 @@ $(document).ready(function(){
     $('input').on('click focusin', function() {
 		this.value = '';
 	});
-	$("#submit_barcode").submit(function(e){
-		if (e.which === '\n\n\n'){
-			this.preventDefault();
-		}
-	});
 });
 </script>
 </body>

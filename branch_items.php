@@ -131,7 +131,7 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	echo "      <div class='col-sm-3 cell list-group-item'>" . $row['Title'] . "</div>";
 	echo "      <div class='col-sm-1 cell list-group-item'>" . $row['CreateDate'] . "</div>";
 	# TODO add function to bring up a modal data entry window for comments.
-	echo "      <div class='col-sm-1 cell list-group-item'><a class='comments' my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#commentsModal' data-whatever='@mdo'><span class='glyphicon glyphicon-pencil'></span></button></a></div>";
+	echo "      <div class='col-sm-1 cell list-group-item'><a id='comment' my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#commentsModal'><span class='glyphicon glyphicon-pencil'></span></button></a></div>";
 	echo "      <div class='col-sm-1 cell list-group-item'><a class='info' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-question-sign'></span></button></a></div>";
 	if ($row['Contact'] == 1){
 		echo "      <div class='col-sm-1 cell list-group-item'><a class='av-button' my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."'><button type='button' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-earphone'></span>?</button></a></div>";
@@ -195,13 +195,13 @@ if ($ran == 0){
         <form>
           <div class="form-group">
             <label for="message-text" class="control-label">Comments:</label>
-            <textarea class="form-control" id="message-text"></textarea>
+            <textarea class="form-control" id="comment-text"></textarea>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-        <button id='save-comments' type="button" class="btn btn-primary">Save</button>
+        <a class="btn btn-default" data-dismiss="modal">Close</a>
+        <a id='save-comments' class="btn btn-primary" data-dismiss="modal">Save</a>
       </div>
     </div>
   </div>
@@ -221,9 +221,33 @@ $(window).scroll(function(){
 
 var isDescending = false;
 $(document).ready(function(){
-	// Handles comments modal dialog box.
+	// Handles comments modal dialog box. add the action branch and item to the modal so we 
+	// can fire an ajax request and know what we are talking about.
+	$("a#comment").click(function(){
+		// $("#info-dialog").load("demo_test.txt");
+		itemId = $(this).attr('item_id');
+		branch = $(this).attr('branch');
+		myAction = $(this).attr('my-action');
+		$("#comment-text").text(itemId + " : " + branch + " : " + myAction);
+		$("#save-comments").attr('item_id', itemId);
+		$("#save-comments").attr('branch', branch);
+		$("#save-comments").attr('my-action', myAction);
+		$("textarea#comment-text").val('');
+	});
 	
-	
+	// What to do when the save button is clicked.
+	$("a#save-comments").click(function(){
+		itemId = $(this).attr('item_id');
+		branch = $(this).attr('branch');
+		myAction = $(this).attr('my-action');
+		data   = encodeURIComponent($("textarea#comment-text").val());
+		$("#info-dialog").load(
+			"functions.php?action=" + myAction + "&item_id=" + itemId + "&branch=" + branch + "&data=" + data, 
+			function(responseTxt, statusTxt, xhr){
+				if(statusTxt == "error")
+					$("#comment-text").text("Error: " + xhr.status + ": " + xhr.statusText);
+		});
+    });
 	// Handles all the actions related to displaying information in the modal dialogue box.
 	$("a.av-button").click(function(){
         // $("#info-dialog").load("demo_test.txt");
