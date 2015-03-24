@@ -28,7 +28,7 @@
 		<li><a href="help.php"><span class="glyphicon glyphicon-info-sign"></span></a></li>
 	  </ul>
 	  <form class="navbar-form navbar-right">
-		<input type="text" class="form-control" placeholder="Search...">
+		<input id='search' type="text" class="form-control" placeholder="Search..." name='search-term'>
 	  </form>
 	</div>
   </div>
@@ -48,12 +48,6 @@
 			}
 		} 
 	?></h2>
-	
-	
-	<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#commentsModal" data-whatever="@mdo">Open modal for @mdo</button>
-	
-	
-	
 <!--
 <form action='index.php'>
 <input type='submit' value='back'>
@@ -75,21 +69,8 @@ ini_set('error_reporting', E_ALL);
 // phpinfo();
 require 'db.inc';
 
-# creates a get more information form which will display customer information.
-function getContact(){
-	// $ret = "<form action='delete.php' method='POST'>";
-	// $ret .= "<input type='hidden' value='$orderId' name='order_id'>";
-	// $ret .= "<input type='hidden' value='$orderLine' name='order_line'>";
-	// $ret .= "<input type='hidden' value='$itype' name='itype'>";
-	// $ret .= "<input type='hidden' value='$dateRestriction' name='start_date'>";
-	// $ret .= "<input type='submit' value='X'>";
-	// $ret .= "</form>";
-	// return $ret; 
-	return 'data';
-}
-
 $sql = "";
-$branch = ''; // TODO fix because functions.php needs branch for create but that is not required here.
+$branch = '';
 if (empty($_GET['branch']) || $_GET['branch'] == 'ALL'){
 	# If the item field is empty show the entire database of materials.
 	$sql = "SELECT * FROM avincomplete ORDER BY CreateDate";
@@ -195,7 +176,7 @@ if ($ran == 0){
         <form>
           <div class="form-group">
             <label for="message-text" class="control-label">Comments:</label>
-            <textarea class="form-control" id="comment-text"></textarea>
+            <textarea class="form-control" id="comment-text" placeholder="comments" autofocus></textarea>
           </div>
         </form>
       </div>
@@ -233,6 +214,11 @@ $(document).ready(function(){
 		$("#save-comments").attr('branch', branch);
 		$("#save-comments").attr('my-action', myAction);
 		$("textarea#comment-text").val('');
+	});
+	
+	// clear out the text area on click
+	$('textarea#comment-text').click('click focusin', function() {
+		$('textarea#comment-text').val('');
 	});
 	
 	// What to do when the save button is clicked.
