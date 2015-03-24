@@ -486,30 +486,40 @@ sub init
 			# catkey|item id         |currlocation| current user bar code |
 			# 875883|31221098551174  |CHECKEDOUT|21221019003992|
 			# **error number 111 on item start, cat=0 seq=0 copy=0 id=31221099948528
-			# if the item is checked out, staff probably have the non-rfid part of the item, since it is 
-			# likely that it came in through a sorter or a smart chute, or handed to staff, what ever.
-			# we want to get the information for the current customer.
-			my @field = split( '\|', $locationCheck );
 			my $apiUpdate = '';
-			if ( defined $field[2] and $field[2] eq "CHECKEDOUT" and $field[3] =~ m/\d{10,}/ ) # item still on user's card...
+			if ( defined $locationCheck ) # which happens if the item has already been discarded or is entered incorrectly.
 			{
-				# echo 31221098551174 | selitem -iB -oI | selcharge -iI -oU | seluser -iU -oBD
-				$apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oI | selcharge -iI -oIU | selitem -iI -oCSBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`; 
+				# pre populate our string with data
+				#31221098551174  |UNKNOWN|(Item not found in ILS)|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
+				$apiUpdate = $itemId . '|UNKNOWN|(Item not found in ILS)|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|';
 			}
-			else # We need the previous user's information.
+			else # Found the item and am going to process it now.
 			{
-				# if its current location is not checked out we need to get the previous customer's information
-				# like we did with -U
-				# seluser -p"EPL-AVSNAG" -oUB | selcharge -iU -oIS # Finds all charges by card and outputs item id and AVSNAG barcode
-				# selitem -iI -oCsBS # Takes item id and outputs cat key previous user (PU) key and item's barcode.
-				# selcatalog -iC -oSt # Takes the cat key and outputs everything so far and the title.
-				# seluser -iU -oSUBDX.9026.X.9007. # Gets the user's key which is first on the output from above and looks up contact info PHONE and EMAIL.
-				$apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oCsBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`;
-			}
+				# if the item is checked out, staff probably have the non-rfid part of the item, since it is 
+				# likely that it came in through a sorter or a smart chute, or handed to staff, what ever.
+				# we want to get the information for the current customer.
+				my @field = split( '\|', $locationCheck );
+				
+				if ( defined $field[2] and $field[2] eq "CHECKEDOUT" and $field[3] =~ m/\d{10,}/ ) # item still on user's card...
+				{
+					# echo 31221098551174 | selitem -iB -oI | selcharge -iI -oU | seluser -iU -oBD
+					$apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oI | selcharge -iI -oIU | selitem -iI -oCSBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`; 
+				}
+				else # We need the previous user's information.
+				{
+					# if its current location is not checked out we need to get the previous customer's information
+					# like we did with -U
+					# seluser -p"EPL-AVSNAG" -oUB | selcharge -iU -oIS # Finds all charges by card and outputs item id and AVSNAG barcode
+					# selitem -iI -oCsBS # Takes item id and outputs cat key previous user (PU) key and item's barcode.
+					# selcatalog -iC -oSt # Takes the cat key and outputs everything so far and the title.
+					# seluser -iU -oSUBDX.9026.X.9007. # Gets the user's key which is first on the output from above and looks up contact info PHONE and EMAIL.
+					$apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oCsBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`;
+				}
+				# Place the item on hold for the av snag card at the correct branch.
+				placeHoldForItem( $itemId );
+			} # End else 'item not found on ILS'.
 			# 31221098551174  |CHECKEDOUT|Putumayo presents Latin reggae [sound recording]|185461|21221019003992|Nisbet ITS STAFF, Andrew|780-496-5108|anisbet@epl.ca|
 			updateNewItems( $apiUpdate );
-			# and place the item on hold for the av snag card at the correct branch.
-			placeHoldForItem( $itemId );
 		}
 		exit;
 	} # End of '-u' switch handling.
