@@ -82,11 +82,11 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	$itemId        = $row['ItemId'];
 	$dateCreated   = $row['CreateDate'];
 	// replace the spaces because they break the sorting.
-	$title         = preg_replace("/\s+/", "_", $row['Title']);
+	$date          = preg_replace("/\-/", "/", $row['CreateDate']);
 	echo "  <tr>";
 	echo "      <td>" . $row['ItemId'] . "</td>";
 	echo "      <td>" . $row['Title'] . "</td>";
-	echo "      <td>" . $row['CreateDate'] . "</td>";
+	echo "      <td>" . $date. "</td>";
 	# TODO add function to bring up a modal data entry window for comments.
 	if (strlen($row['Comments']) > 0){
 		echo "      <td><a id='comment' my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#commentsModal'><span class='glyphicon glyphicon-pencil'></span></a></td>";
