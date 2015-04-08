@@ -74,7 +74,7 @@ if (empty($_GET['branch']) || $_GET['branch'] == 'ALL'){
 } else {
 	$branch = $_GET['branch'];
 	# Show a specific branch items...
-	$sql = "SELECT * FROM avincomplete WHERE Location='" . $_GET['branch'] . "'";
+	$sql = "SELECT * FROM avincomplete WHERE Location='" . $_GET['branch'] . "' ORDER BY CreateDate";
 }
 
 $ret = $db->query($sql);
@@ -89,11 +89,11 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	echo "      <td>" . $date. "</td>";
 	# TODO add function to bring up a modal data entry window for comments.
 	if (strlen($row['Comments']) > 0){
-		echo "      <td><a id='comment' my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#commentsModal'><span class='glyphicon glyphicon-pencil'></span></a></td>";
+		echo "      <td><a my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='comment btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#commentsModal'><span class='glyphicon glyphicon-pencil'></span></a></td>";
 	} else {
-		echo "      <td><a id='comment' my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#commentsModal'><span class='glyphicon glyphicon-pencil'></span></a></td>";
+		echo "      <td><a my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='comment btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#commentsModal'><span class='glyphicon glyphicon-pencil'></span></a></td>";
 	}
-	echo "      <td><a href='#' item_id='".$itemId."' branch='".$row['Location']."' class='info btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-question-sign'></span></a></td>";
+	echo "      <td><a my-action='info' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='info btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-question-sign'></span></a></td>";
 	if ($row['Contact'] == 1){
 		echo "      <td><a my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-earphone'></span>?</a></td>";
 	} else {
@@ -151,7 +151,7 @@ $db->close();
         </form>
       </div>
       <div class="modal-footer">
-        <a class="btn btn-default" data-dismiss="modal">Close</a>
+        <a id='cancel' class="btn btn-default" data-dismiss="modal">Close</a>
         <a id='save-comments' class="btn btn-primary" data-dismiss="modal">Save</a>
       </div>
     </div>
@@ -162,27 +162,39 @@ $db->close();
 
 var isDescending = false;
 $(document).ready(function(){
-	$('#items-table').DataTable();
+	// This command causes the functionality to break on additional pages. TODO: Why?
+	//$('#items-table').DataTable({
+    //    "order": [[ 2, "asc" ]] // order on date entered.
+    //} );
 	// Handles comments modal dialog box. add the action branch and item to the modal so we 
 	// can fire an ajax request and know what we are talking about.
-	$("a#comment").click(function(){
-		// $("#info-dialog").load("demo_test.txt");
-		itemId = $(this).attr('item_id');
-		branch = $(this).attr('branch');
-		myAction = $(this).attr('my-action');
+	$("a.comment").click(function(){
+		
+		var itemId = $(this).attr('item_id');
+		var branch = $(this).attr('branch');
+		var myAction = $(this).attr('my-action');
+		//$("#info-dialog").text("item_id:"+itemId);
 		// alert("I ran");
-		$("#comment-text").text(itemId + " : " + branch + " : " + myAction);
+		//$("#comment-text").text(itemId + " : " + branch + " : " + myAction);
 		$("#save-comments").attr('item_id', itemId);
 		$("#save-comments").attr('branch', branch);
 		$("#save-comments").attr('my-action', myAction);
-		$("textarea#comment-text").val('');
+		//$("textarea#comment-text").val('');
 	});
 	
 	// clear out the text area on click
 	$('textarea#comment-text').click('click focusin', function() {
 		$('textarea#comment-text').val('');
 	});
-
+	
+	$("a#cancel").click(function(){
+		// itemId = $(this).attr('item_id');
+		$("textarea#comment-text").val("");
+		$("#comment-text").text("");
+		$("#save-comments").attr('item_id', "");
+		$("#save-comments").attr('branch', "");
+		$("#save-comments").attr('my-action', "");
+	});
 	
 	// What to do when the save button is clicked.
 	$("a#save-comments").click(function(){
@@ -196,6 +208,11 @@ $(document).ready(function(){
 				if(statusTxt == "error")
 					$("#comment-text").text("Error: " + xhr.status + ": " + xhr.statusText);
 		});
+		$("textarea#comment-text").val("");
+		$("#comment-text").text("");
+		$("#save-comments").attr('item_id', "");
+		$("#save-comments").attr('branch', "");
+		$("#save-comments").attr('my-action', "");
     });
 	// Handles all the actions related to displaying information in the modal dialogue box.
 	$("a.av-button").click(function(){
