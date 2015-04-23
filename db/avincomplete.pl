@@ -46,8 +46,9 @@
 #               createholds.pl, chargeitems.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.3 - Added -t to discharge items marked complete.
 #          0.2 - Fix to -u titles not updating, items in database not checked
-#                off customers' card. 
+#                off customers' card. -U and -u refactored. 
 #          0.1 - Dev. 
 #
 ####################################################
@@ -89,7 +90,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-CdfuUx] [-D<foo.bar>]
+	usage: $0 [-cCdftuUx] [-D<foo.bar>]
 Creates and manages av incomplete sqlite3 database.
 Note: -c and -d flags rebuild the avsnag cards and discard cards for a branch based on 
 profiles. The branch id must appear as the first 3 letters of its name like: SPW-AVSNAG, or
@@ -98,7 +99,8 @@ RIV-DISCARD, for a discard card.
  -c: Refreshes the avsnagcards table of EPL-AVSNAG cards. These are the cards used to checkout 
      materials and place holds. Can safely be run regularly. AV incomplete cards themselves
      don't change all that often, but if a new one is added this should be run. See '-d'
-     for discard cards.
+     for discard cards. This should be run before -U to ensure all cards are attributable
+     to a given branch before we start trying to insert items and place holds on those items.
  -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
  -d: Refreshes the avdiscardcards table of DISCARD cards. Can safely be run regularly especially
      if a new branch discard card is added. See '-c' for avsnag cards.
@@ -158,54 +160,52 @@ EOF
 # Creates new records in the AV incomplete database. Ignores if the 
 # primary key (item ID) is already present.
 # param:  Lines of data to store: 
-#         '31221102616518  |CLV-AVINCOMPLETE|Pride and prejudice|535652|21221021851248|Smith, Merlin|780-244-5655|xxxxxxxx@hotmail.com|'
+#         '31221102616518  |Pride and prejudice|535652|21221021851248|Smith, Merlin|780-244-5655|xxxxxxxx@hotmail.com|'
+# param:  library code string like 'WMC'
 # return: none.
-sub insertNewItems( $ )
+sub insertNewItem( $$ )
 {
-	$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
-		PrintError       => 0,
-		RaiseError       => 1,
-		AutoCommit       => 1,
-		FetchHashKeyName => 'NAME_lc',
-	});
 	# Now start importing data.
-	my @data = split '\n', shift;
-	while (@data)
+	my $line    = shift;
+	my $libCode = shift;
+	my($itemId, $title, $userKey, $userId, $name, $phone, $email) = split( '\|', $line );
+	if ( defined $itemId and $libCode ne '')
 	{
-		my $line = shift @data;
-		my($itemId, $title, $userKey, $userId, $name, $phone, $email) = split( '\|', $line );
-		if ( defined $itemId )
+		$itemId   = trim( $itemId );
+		$userKey  = trim( $userKey );
+		$userId   = trim( $userId );
+		if ( $userId !~ m/\d{13,}/ )
 		{
-			$itemId   = trim( $itemId );
-			$userKey  = trim( $userKey );
-			$userId   = trim( $userId );
-			if ( $userId !~ m/\d{13,}/ )
-			{
-				$name = 'N/A';
-				$phone= 'N/A';
-				$email= 'N/A';
-			}
-			$title    = trim( $title );
-			$name     = trim( $name );
-			$phone    = trim( $phone );
-			$email    = trim( $email );
-			
-			# 31221106301570  |Call of duty|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
-			# print "$itemId, '$title', $userKey, $userId, '$name', '$phone', '$email'\n";
-			$SQL = <<"END_SQL";
+			$name = 'N/A';
+			$phone= 'N/A';
+			$email= 'N/A';
+		}
+		$title    = trim( $title );
+		$name     = trim( $name );
+		$phone    = trim( $phone );
+		$email    = trim( $email );
+		
+		# 31221106301570  |Call of duty|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
+		# print "$itemId, '$title', $userKey, $userId, '$name', '$phone', '$email' '$libCode'\n";
+		$SQL = <<"END_SQL";
 INSERT OR IGNORE INTO avincomplete 
-(ItemId, Title, UserKey, UserId, UserName, UserPhone, UserEmail, Processed, ProcessDate) 
+(ItemId, Title, UserKey, UserId, UserName, UserPhone, UserEmail, Processed, ProcessDate, Location) 
 VALUES 
-(?, ?, ?, ?, ?, ?, ?, ?, ?)
+(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 END_SQL
-			$DBH->do($SQL, undef, $itemId, $title, $userKey, $userId, $name, $phone, $email, 1, $DATE);
-		}
-		else
-		{
-			print STDERR "rejecting item '$itemId'\n";
-		}
+		$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
+			PrintError       => 0,
+			RaiseError       => 1,
+			AutoCommit       => 1,
+			FetchHashKeyName => 'NAME_lc',
+		});
+		$DBH->do($SQL, undef, $itemId, $title, $userKey, $userId, $name, $phone, $email, 1, $DATE, $libCode);
+		$DBH->disconnect;
 	}
-	$DBH->disconnect;
+	else
+	{
+		print STDERR "rejecting item '$itemId'\n";
+	}
 }
 
 # Updates a staff entered record in the AV incomplete database.
@@ -402,8 +402,8 @@ END_SQL
 sub placeHoldForItem( $ )
 {
 	my ($itemId) = shift;
-	# Get the branch's snag card.
-	my $branchCard = `echo "select UserId from avsnagcards where Branch = (select Location from avincomplete where ItemId=$itemId);" | sqlite3 $DB_FILE`;
+	# Get the branch's snag card, but make sure we limit it to one card.
+	my $branchCard = `echo "select UserId from avsnagcards where Branch = (select Location from avincomplete where ItemId=$itemId) LIMIT 1;" | sqlite3 $DB_FILE`;
 	my $branch     = `echo "select Location from avincomplete where ItemId=$itemId;" | sqlite3 $DB_FILE`;
 	chomp( $branchCard );
 	chomp( $branch );
@@ -529,7 +529,7 @@ sub updatePreviousUser( $ )
 }
 
 # This function takes a item ID as an argument, and returns 1 if the item is found on the ILS and 0 otherwise.
-# param:  Item ID 
+# param:  Item ID - note that it must be free of pipes, and should be free of any extra spaces.
 # return 1 if item exists and 0 otherwise (because it was discarded).
 sub isInILS( $ )
 {
@@ -555,15 +555,92 @@ sub updateTitle( $ )
 	updateNewItems( $sqlAPI );
 }
 
+# This function tests if the user key user id combo is a valid user.
+# param:  string to test like '604887|WMC-AVINCOMPLETE|' 
+# return  1 if the a valid system card; the bar code contains letters, and 0 otherwise.
+sub isValidSystemCard( $ )
+{
+	my $userKeyUserId = shift;
+	#   valid: '604887|WMC-AVINCOMPLETE|' 
+	# invalid: '604887|21221012345678|' 
+	return 1 if ( $userKeyUserId =~ m/[A-Z]+/ );
+	return 0;
+}
+
+# This function tests if the given item id is in the database.
+# param:  string to test like '31221012345678' 
+# return  1 if the item is already in the database, and 0 otherwise.
+sub alreadyInDatabase( $ )
+{
+	my $itemId = shift;
+	my $result = `echo "SELECT ItemId, Title FROM avincomplete WHERE ItemId=$itemId;" | sqlite3 $DB_FILE`;
+	if ( $result =~ m/\d{14}/ )
+	{
+		# All the system messages appear in parenthesis and then the word 'Item', so if we find one
+		# let's try to re check the item in the ILS.
+		if ( $result =~ m/\(Item/ )
+		{
+			return 0; # If the title is a system message, return false so we try to update again.
+		}
+		else
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
+# This function finds the library that owns the card passed in as parameter 1.
+# param:  string to test like '604887|WMC-AVINCOMPLETE|' 
+# return  string of the library code, like 'WMC', or 'MNA' if the branch can't be determined.
+#         In that case, try running -c to update the 
+sub getLibraryCode( $ )
+{
+	# Set up a default, should never get used, but if there is a failure for some reason it make 
+	# sense that items be routed and managed from the main branch.
+	my $code = 'MNA';
+	my $userKeyUserId = shift;
+	my @keyIdFields   = split '\|', $userKeyUserId;
+	if ( defined $keyIdFields[0] )
+	{
+		my $key  = $keyIdFields[0];
+		$code = `echo "SELECT Branch FROM avsnagcards WHERE UserKey=$key;" | sqlite3 $DB_FILE`;
+		chomp( $code );
+	}
+	return $code;
+}
 
 # Kicks off the setting of various switches.
 # param:  
 # return: 
 sub init
 {
-    my $opt_string = 'cCdD:fuUx';
+    my $opt_string = 'cCdD:ftuUx';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
+	# This looks for items that are marked complete and discharges them from the card they are checked out to.
+	if ( $opt{'t'} ) 
+	{
+		# Find all the items marked complete.
+		my $selectCompleteItems = `echo 'SELECT ItemId FROM avincomplete WHERE Complete=1;' | sqlite3 $DB_FILE`;
+		my @data = split '\n', $selectCompleteItems;
+		while (@data)
+		{
+			# For all the items that staff entered, let's find the current location.
+			my $itemId = shift @data;
+			# Does the item exist on the ils or was it discarded?
+			if ( ! isInILS( $itemId ) )
+			{
+				# We could actually remove the record because if it doesn't exist it's just going to clog things up.
+				`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
+				next;
+			}
+			# Now find the user id for this item, and tip: it's not necessarily the id in the database since that could be 
+			# the previous user.
+			
+		}
+		exit;
+	}
 	# Create new sqlite database.
 	if ( $opt{'C'} ) 
 	{
@@ -640,27 +717,50 @@ sub init
 		}
 		exit;
 	} # End of '-u' switch handling.
+	
 	# Update database from AVSNAG profile cards, inserts new records or ignores if it's already there.
 	if ( $opt{'U'} )
 	{
-		# seluser -p"EPL-AVSNAG" -oUB | selcharge -iU -oIS # Finds all charges by card and outputs item id and AVSNAG barcode
-		# selitem -iI -oCsBS # Takes item id and outputs cat key previous user (PU) key and item's barcode.
-		# selcatalog -iC -oSt # Takes the cat key and outputs everything so far and the title.
-		# seluser -iU -oSUBDX.9026.X.9007. # Gets the user's key which is first on the output from above and looks up contact info PHONE and EMAIL. 
-		my $apiResults = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL-AVSNAG" -oUB | selcharge -iU -oIS | selitem -iI -oCsBS | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`;
-		# produces output like:
-		# -- snip --
-		# 31221106301570  |CLV-AVINCOMPLETE|Call of duty|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
-		# 31221102616518  |CLV-AVINCOMPLETE|Pride and prejudice [videorecording]|535652|21221021851248|Smith, Merlin|780-244-5655|xxxxxxxx@hotmail.com|
-		# 31221106335685  |CLV-AVINCOMPLETE|Up all night |1123298|CLV-AVINCOMPLETE|CLV-AV Incomplete|||
-		# 31221107371440  |CLV-AVINCOMPLETE|Ske-dat-de-dat|582982|ABB-AVINCOMPLETE|ABB-AV Incomplete|||
-		# -- snip --
-		insertNewItems( $apiResults );
-		# Since all these items came from the AVSNAGs cards across the library they don't need to charged or discharged.
-		# We still want to place a hold for the item if it gets trapped by a sorter or smart chute.
-		# placeHoldsOnItems( $apiResults );
-		exit;
-	} # End of '-U' switch handling.
+		# Find all the AV Snag cards in the system, then iterate over them to find all the items charged.
+		my $selectSnagCards = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL-AVSNAG" -oUB'`;
+		# Looks like: '604887|WMC-AVINCOMPLETE|'
+		my @data = split '\n', $selectSnagCards;
+		while (@data)
+		{
+			my $userKeyUserId = shift @data;
+			################################
+			# Uncomment the next line if you want to test just a single branch.
+			next if ( $userKeyUserId !~ m/WMC-AVINCOMPLETE/ ); ############ Testing only remove .
+			################################
+			# Sometimes a human customer account gets set to AVSNAG accidentally so lets skip it if it is.
+			next if ( ! isValidSystemCard( $userKeyUserId ) );
+			# Later we must include the library code whenever we insert a new item so get it now.
+			my $libCode = getLibraryCode( $userKeyUserId );
+			# Now find all the charges for this card. The output looks like this: '31221104409748  |'
+			my $selectCardCharges = `echo "$userKeyUserId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selcharge -iU -oIS | selitem -iI -oB'`;
+			my @itemList = split '\n', $selectCardCharges;
+			while (@itemList)
+			{
+				# For all the items that staff entered, let's find the current location.
+				my $itemId = shift @itemList;
+				# clean the item id of spaces and trailing pipe.
+				$itemId =~ s/(\s+|\|)//g;
+				# speed things up a bit if we ignore the ones we have already processed.
+				next if ( alreadyInDatabase( $itemId ) );
+				# Now we will make an entry for the item im the database, then populate it with title and user data.
+				my $apiUpdate = $itemId . '|(Item process in progress...)|0|0|Unavailable|0|none|';
+				insertNewItem( $apiUpdate, $libCode );
+				print STDERR "inserted: $itemId\n";
+				# We can update the title information.
+				updateTitle( $itemId );
+				# We already know that this is a system card so let's get the previous user.
+				updatePreviousUser( $itemId );
+				# Try to Place hold for the av snag card if there isn't one already.
+				placeHoldForItem( $itemId );
+			} # end while
+		} # end of while system card iteration.
+		exit; # End of '-U' switch handling.
+	} 
 	if ( $opt{'c'} ) # Create table of system cards for holds and checkouts.
 	{
 		my $apiResults = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL-AVSNAG" -oUB'`;
