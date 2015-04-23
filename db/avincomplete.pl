@@ -106,6 +106,7 @@ RIV-DISCARD, for a discard card.
      if a new branch discard card is added. See '-c' for avsnag cards.
  -D<file>: Dump hold table to HTML file <file>.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
+ -t: Discharge items that are marked complete.
  -u: Updates database based on items entered into the database by the website.
  -U: Updates database based on items on cards with $AVSNAG profile. Safe to run anytime,
      but should be run with a frequency that is inversely proportional to the amount of
@@ -632,12 +633,16 @@ sub init
 			if ( ! isInILS( $itemId ) )
 			{
 				# We could actually remove the record because if it doesn't exist it's just going to clog things up.
+				print STDERR "$itemId not found in ILS, removing the entry from the database.\n";
 				`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
 				next;
 			}
-			# Now find the user id for this item, and tip: it's not necessarily the id in the database since that could be 
-			# the previous user.
-			
+			# discharge the item.
+			print STDERR "discharging $itemId, removing the entry from the database.\n";
+			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U'`;
+			`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
+			# TESTING. -- do once.
+			last; 
 		}
 		exit;
 	}
