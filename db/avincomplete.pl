@@ -46,6 +46,8 @@
 #               createholds.pl, chargeitems.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.2 - Fix to -u titles not updating, items in database not checked
+#                off customers' card. 
 #          0.1 - Dev. 
 #
 ####################################################
@@ -67,7 +69,7 @@ my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
 my $DATE     = `date +%Y-%m-%d`;
 chomp( $DATE );
 
-my $VERSION  = qq{0.1};
+my $VERSION  = qq{0.2};
 
 # Trim function to remove whitespace from the start and end of the string.
 # param:  string to trim.
@@ -102,7 +104,7 @@ RIV-DISCARD, for a discard card.
      if a new branch discard card is added. See '-c' for avsnag cards.
  -D<file>: Dump hold table to HTML file <file>.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
- -u: Updates database based on items entered into the database by the website
+ -u: Updates database based on items entered into the database by the website.
  -U: Updates database based on items on cards with $AVSNAG profile. Safe to run anytime,
      but should be run with a frequency that is inversely proportional to the amount of
      time staff are servicing AV incomplete.
@@ -119,26 +121,39 @@ EOF
 ######### Subroutines
 # Table reference:
 #
-# ItemId INTEGER PRIMARY KEY NOT NULL,
-# Title CHAR(256),
-# CreateDate DATE DEFAULT CURRENT_DATE,
-# UserKey INTEGER,
-# UserId INTEGER,
-# UserPhone CHAR(20),
-# UserName  CHAR(100),
-# UserEmail CHAR(100),
-# Processed INTEGER DEFAULT 0,
-# ProcessDate DATE DEFAULT NULL,
-# Contact INTEGER DEFAULT 0,
-# ContactDate DATE DEFAULT NULL,
-# Complete INTEGER DEFAULT 0,
-# CompleteDate DATE DEFAULT NULL,
-# Discard  INTEGER DEFAULT 0,
-# DiscardDate DATE DEFAULT NULL,
-# Location CHAR(6) NOT NULL,
-# TransitLocation CHAR(6) DEFAULT NULL,
-# TransitDate DATE DEFAULT NULL,
-# Comments CHAR(256)
+# sqlite> .schema
+# CREATE TABLE avincomplete (
+        # ItemId INTEGER PRIMARY KEY NOT NULL,
+        # Title CHAR(256),
+        # CreateDate DATE DEFAULT CURRENT_DATE,
+        # UserKey INTEGER,
+        # UserId INTEGER,
+        # UserPhone CHAR(20),
+        # UserName  CHAR(100),
+        # UserEmail CHAR(100),
+        # Processed INTEGER DEFAULT 0,
+        # ProcessDate DATE DEFAULT NULL,
+        # Contact INTEGER DEFAULT 0,
+        # ContactDate DATE DEFAULT NULL,
+        # Complete INTEGER DEFAULT 0,
+        # CompleteDate DATE DEFAULT NULL,
+        # Discard  INTEGER DEFAULT 0,
+        # DiscardDate DATE DEFAULT NULL,
+        # Location CHAR(6) NOT NULL,
+        # TransitLocation CHAR(6) DEFAULT NULL,
+        # TransitDate DATE DEFAULT NULL,
+        # Comments CHAR(256)
+# );
+# CREATE TABLE avsnagcards (
+        # UserKey INTEGER PRIMARY KEY NOT NULL,
+        # UserId CHAR(20) NOT NULL,
+        # Branch CHAR(6) NOT NULL
+# );
+# CREATE TABLE avdiscardcards (
+        # UserKey INTEGER PRIMARY KEY NOT NULL,
+        # UserId CHAR(20) NOT NULL,
+        # Branch CHAR(6) NOT NULL
+# );
 #
 # Creates new records in the AV incomplete database. Ignores if the 
 # primary key (item ID) is already present.
@@ -158,8 +173,8 @@ sub insertNewItems( $ )
 	while (@data)
 	{
 		my $line = shift @data;
-		my($itemId, $location, $title, $userKey, $userId, $name, $phone, $email) = split( '\|', $line );
-		if ( defined $itemId and defined $location )
+		my($itemId, $title, $userKey, $userId, $name, $phone, $email) = split( '\|', $line );
+		if ( defined $itemId )
 		{
 			$itemId   = trim( $itemId );
 			$userKey  = trim( $userKey );
@@ -174,25 +189,20 @@ sub insertNewItems( $ )
 			$name     = trim( $name );
 			$phone    = trim( $phone );
 			$email    = trim( $email );
-			$location = trim( $location );
-			# This is brittle, but it seems that most cards are named by branch as the first 3 characters.
-			# If that holds lets get them now.
-			$location = substr( $location, 0, 3 );
-			print STDERR "adding item '$itemId' from branch '$location'\n";
-
-			# 31221106301570  |CLV-AVINCOMPLETE|Call of duty|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
-			# print "$itemId, '$location', '$title', $userKey, $userId, '$name', '$phone', '$email'\n";
+			
+			# 31221106301570  |Call of duty|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
+			# print "$itemId, '$title', $userKey, $userId, '$name', '$phone', '$email'\n";
 			$SQL = <<"END_SQL";
 INSERT OR IGNORE INTO avincomplete 
-(ItemId, Location, Title, UserKey, UserId, UserName, UserPhone, UserEmail, Processed, ProcessDate) 
+(ItemId, Title, UserKey, UserId, UserName, UserPhone, UserEmail, Processed, ProcessDate) 
 VALUES 
-(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+(?, ?, ?, ?, ?, ?, ?, ?, ?)
 END_SQL
-			$DBH->do($SQL, undef, $itemId, $location, $title, $userKey, $userId, $name, $phone, $email, 1, $DATE);
+			$DBH->do($SQL, undef, $itemId, $title, $userKey, $userId, $name, $phone, $email, 1, $DATE);
 		}
 		else
 		{
-			print STDERR "rejecting item '$itemId' branch '$location'\n";
+			print STDERR "rejecting item '$itemId'\n";
 		}
 	}
 	$DBH->disconnect;
@@ -200,7 +210,7 @@ END_SQL
 
 # Updates a staff entered record in the AV incomplete database.
 # param:  Lines of data to store: 
-#         '31221102616518  |CHECKEDOUT|Pride and prejudice|535652|21221021851248|Smith, Merlin|780-244-5655|xxxxxxxx@hotmail.com|'
+#         '31221102616518  |Pride and prejudice|535652|21221021851248|Smith, Merlin|780-244-5655|xxxxxxxx@hotmail.com|'
 # return: none.
 sub updateNewItems( $ )
 {
@@ -212,7 +222,7 @@ sub updateNewItems( $ )
 	});
 	# Now start importing data.
 	my $line = shift;
-	my($itemId, $currentLocation, $title, $userKey, $userId, $name, $phone, $email) = split( '\|', $line );
+	my($itemId, $title, $userKey, $userId, $name, $phone, $email) = split( '\|', $line );
 	if ( defined $itemId )
 	{
 		$itemId   = trim( $itemId );
@@ -228,10 +238,10 @@ sub updateNewItems( $ )
 		$name     = trim( $name );
 		$phone    = trim( $phone );
 		$email    = trim( $email );
-		print STDERR "adding item '$itemId' currently in '$currentLocation'\n";
+		print STDERR "updating item '$itemId'\n";
 
-		# 31221106301570  |CLV-AVINCOMPLETE|Call of duty|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
-		# print "$itemId, '$currentLocation', '$title', $userKey, $userId, '$name', '$phone', '$email'\n";
+		# 31221106301570  |Call of duty|564906|2122102299999|V, Brook|780-451-2345|xxxxxxxx@hotmail.com|
+		# print "$itemId, '$title', $userKey, $userId, '$name', '$phone', '$email'\n";
 		$SQL = <<"END_SQL";
 UPDATE avincomplete SET Title=?, UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
 WHERE ItemId=?
@@ -402,12 +412,11 @@ sub placeHoldForItem( $ )
 		print "\n\n\n Branch card: '$branchCard' \n\n\n";
 		# Does a hold exist for this item on this card? If there is no hold it will return nothing.
 		# echo ABB-AVINCOMPLETE | seluser -iB | selhold -iU -oI | selitem -iI -oB | grep $itemId # will output all the ids 
-		my $hold = `echo "$branchCard|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | seluser -iB | selhold -iU -oI | selitem -iI -oB | grep $itemId'`; # will output all the ids 
+		my $hold = `echo "$branchCard|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | seluser -iB | selhold -iU -jACTIVE -oI | selitem -iI -oB | grep $itemId'`; # will output all the ids 
 		if ( $hold eq '' )
 		{
 			if ( $branch ne '' )
 			{
-				# `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -B"$branchCard"'`;
 				`echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -l"EPL$branch" -B"$branchCard" -U'`;
 				print STDERR "Ok: copy hold place on item '$itemId' for '$branchCard'.\n";
 			}
@@ -426,6 +435,126 @@ sub placeHoldForItem( $ )
 		print STDERR "* warn: couldn't find a branch card because the branch name was empty on item '$itemId'\n";
 	}
 }
+
+# Updates a staff entered record in the AV incomplete database.
+# param:  Lines of data to store: 
+#         '31221102616518|535652|21221021851248|Smith, Merlin|780-244-5655|xxxxxxxx@hotmail.com|'
+# return: none.
+sub updateUserInfo( $ )
+{
+	# Now start importing data.
+	my $line = shift;
+	my($itemId, $userKey, $userId, $name, $phone, $email) = split( '\|', $line );
+	$userKey  = trim( $userKey );
+	$userId   = trim( $userId );
+	if ( $userId !~ m/\d{12}/ )
+	{
+		$name = 'N/A';
+		$phone= 'N/A';
+		$email= 'N/A';
+	}
+	$name     = trim( $name );
+	$phone    = trim( $phone );
+	$email    = trim( $email );
+	print STDERR "updating item '$itemId'\n";
+	# 31221106301570|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
+	# print "$itemId, $userKey, $userId, '$name', '$phone', '$email'\n";
+	$SQL = <<"END_SQL";
+UPDATE avincomplete SET UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
+WHERE ItemId=?
+END_SQL
+	$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
+		PrintError       => 0,
+		RaiseError       => 1,
+		AutoCommit       => 1,
+		FetchHashKeyName => 'NAME_lc',
+	});
+	$DBH->do($SQL, undef, $userKey, $userId, $name, $phone, $email, 1, $DATE, $itemId);
+	$DBH->disconnect;
+}
+
+# This function takes a item ID as an argument, and returns 1 if the current location is CHECKEDOUT and the 
+# account is a legit customer, that is, not a system card, and 0 otherwise.
+# param:  Item ID 
+# return: 1 if checked out to customer and 0 otherwise.
+sub isCheckedOutToCustomer( $ )
+{
+	my $itemId = shift;
+	# my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -om'`;
+	my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oIm | selcharge -iI -oUS | seluser -iU -oSB'`;
+	# On success: 'CHECKEDOUT|21221022896929|' on fail: ''
+	# Here we check if we get at least 12 digits because system cards are letters and L-PASS and ME have different 
+	# numbers but all more than 12.
+	return 1 if ( $locationCheck =~ m/CHECKEDOUT/ and $locationCheck =~ m/\d{12}/ );
+	return 0;
+}
+
+# This function takes a item ID as an argument, updates the record with the current user's  
+# account information.
+# param:  Item ID 
+# return: none.
+sub updateCurrentUser( $ )
+{
+	my $itemId = shift;
+	# UPDATE avincomplete SET Title=?, UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
+	# WHERE ItemId=?
+	my $sqlAPI = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oI | selcharge -iI -oU | seluser -iU -oUBDX.9026.X.9007.'`;
+	# returns: '564906|21221012345678|V, Brooke|780-xxx-xxxx|xxxxxxxx@hotmail.com|'
+	# but we need:
+	#31221098551174|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
+	chomp( $sqlAPI );
+	$sqlAPI = $itemId . "|" . $sqlAPI;
+	print STDERR "$sqlAPI\n";
+	updateUserInfo( $sqlAPI );
+}
+
+# This function takes a item ID as an argument, updates the record with the current user's  
+# account information.
+# param:  Item ID 
+# return: none.
+sub updatePreviousUser( $ )
+{
+	my $itemId = shift;
+	# UPDATE avincomplete SET Title=?, UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
+	# WHERE ItemId=?
+	########################## TODO finish finding the previous user.
+	my $sqlAPI = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -os | seluser -iU -oUBDX.9026.X.9007.'`;
+	# returns: '871426|21221021008682|W, T|780-644-nnnn|email@foo.bar|'
+	# but we need:
+	#31221098551174|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
+	chomp( $sqlAPI );
+	$sqlAPI = $itemId . "|" . $sqlAPI;
+	print STDERR "$sqlAPI\n";
+	updateUserInfo( $sqlAPI );
+}
+
+# This function takes a item ID as an argument, and returns 1 if the item is found on the ILS and 0 otherwise.
+# param:  Item ID 
+# return 1 if item exists and 0 otherwise (because it was discarded).
+sub isInILS( $ )
+{
+	my $itemId = shift;
+	my $returnString = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB'`;
+	return 1 if ( $returnString =~ m/\d+/ );
+	return 0;
+}
+
+# This function takes a item ID as an argument, updates the title information in the database.
+# param:  Item ID 
+# return  none
+sub updateTitle( $ )
+{
+	my $itemId = shift;
+	# UPDATE avincomplete SET Title=?, UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
+	# WHERE ItemId=?
+	my $sqlAPI = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oC | selcatalog -iC -ot'`;
+	#31221098551174|(Item not found in ILS)|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
+	chomp( $sqlAPI );
+	$sqlAPI = $itemId . "|" . $sqlAPI . "0|0|Unknown|0|none|";
+	print STDERR "$sqlAPI\n";
+	updateNewItems( $sqlAPI );
+}
+
 
 # Kicks off the setting of various switches.
 # param:  
@@ -474,52 +603,40 @@ sub init
 	}
 	# Update database from items entered into the local database by the web site.
 	# We want to get data for all the items that don't already have it so we will need:
-	# 
+	# Find the items in the db that are entered by staff.
 	if ( $opt{'u'} )
 	{
 		my $apiResults = `echo 'SELECT ItemId FROM avincomplete WHERE Processed=0;' | sqlite3 $DB_FILE`;
 		my @data = split '\n', $apiResults;
 		while (@data)
 		{
+			# For all the items that staff entered, let's find the current location.
 			my $itemId = shift @data;
-			my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oICBm | selcharge -iI -oUS | seluser -iU -oSB'`;
-			# catkey|item id         |currlocation| current user bar code |
-			# 875883|31221098551174  |CHECKEDOUT|21221019003992|
-			# **error number 111 on item start, cat=0 seq=0 copy=0 id=31221099948528
-			my $apiUpdate = '';
-			if ( defined $locationCheck ) # which happens if the item has already been discarded or is entered incorrectly.
+			# Does the item exist on the ils or was it discarded?
+			if ( ! isInILS( $itemId ) )
 			{
-				# pre populate our string with data
-				#31221098551174  |UNKNOWN|(Item not found in ILS)|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
-				$apiUpdate = $itemId . '|UNKNOWN|(Item not found in ILS)|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|';
+				print STDERR "$itemId not found in ILS.\n";
+				# post that the item is missing 
+				my $apiUpdate = $itemId . '|(Item not found in ILS, maybe discarded, or invalid item ID)|0|0|Unavailable|0|none|';
+				updateNewItems( $apiUpdate );
+				# Nothing else we can do with this, let's get the next item ID.
+				next;
 			}
-			else # Found the item and am going to process it now.
+			# We can update the title information.
+			updateTitle( $itemId );
+			# if it's CHECKEDOUT then lets find the user information and update the record.
+			if ( isCheckedOutToCustomer( $itemId ) )
 			{
-				# if the item is checked out, staff probably have the non-rfid part of the item, since it is 
-				# likely that it came in through a sorter or a smart chute, or handed to staff, what ever.
-				# we want to get the information for the current customer.
-				my @field = split( '\|', $locationCheck );
-				
-				if ( defined $field[2] and $field[2] eq "CHECKEDOUT" and $field[3] =~ m/\d{10,}/ ) # item still on user's card...
-				{
-					# echo 31221098551174 | selitem -iB -oI | selcharge -iI -oU | seluser -iU -oBD
-					$apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oI | selcharge -iI -oIU | selitem -iI -oCSBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`; 
-				}
-				else # We need the previous user's information.
-				{
-					# if its current location is not checked out we need to get the previous customer's information
-					# like we did with -U
-					# seluser -p"EPL-AVSNAG" -oUB | selcharge -iU -oIS # Finds all charges by card and outputs item id and AVSNAG barcode
-					# selitem -iI -oCsBS # Takes item id and outputs cat key previous user (PU) key and item's barcode.
-					# selcatalog -iC -oSt # Takes the cat key and outputs everything so far and the title.
-					# seluser -iU -oSUBDX.9026.X.9007. # Gets the user's key which is first on the output from above and looks up contact info PHONE and EMAIL.
-					$apiUpdate = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oCsBm | selcatalog -iC -oSt | seluser -iU -oSUBDX.9026.X.9007.'`;
-				}
-				# Place the item on hold for the av snag card at the correct branch.
-				placeHoldForItem( $itemId );
-			} # End else 'item not found on ILS'.
-			# 31221098551174  |CHECKEDOUT|Putumayo presents Latin reggae [sound recording]|185461|21221019003992|Nisbet ITS STAFF, Andrew|780-496-5108|anisbet@epl.ca|
-			updateNewItems( $apiUpdate );
+				print STDERR "Yep, checked out to customer.\n";
+				updateCurrentUser( $itemId );
+			}
+			else
+			{
+				print STDERR "Nope not checked, or checked out to a system card.\n";
+				updatePreviousUser( $itemId );
+			}
+			# Place the item on hold for the av snag card at the correct branch.
+			placeHoldForItem( $itemId );
 		}
 		exit;
 	} # End of '-u' switch handling.
