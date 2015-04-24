@@ -33,21 +33,23 @@ echo `date` >> $HOME/load.log
 if [ -s $HOME/avincomplete.pl ]
 then
 	cd $HOME
-	echo "database $HOME/avincomplete.pl updating AVSNAG cards." >> $HOME/load.log
-	$HOME/avincomplete.pl -c
+	echo "== database $HOME/avincomplete.pl updating AVSNAG cards." >> $HOME/load.log
+	$HOME/avincomplete.pl -c >>$HOME/load.log 2>&1
 	echo "done." >> $HOME/load.log
-	echo "database $HOME/avincomplete.pl updating discard cards." >> $HOME/load.log
-	$HOME/avincomplete.pl -d
+	echo "== database $HOME/avincomplete.pl updating discard cards." >> $HOME/load.log
+	$HOME/avincomplete.pl -d >>$HOME/load.log 2>&1
 	echo "done." >> $HOME/load.log
-	echo "database $HOME/avincomplete.pl updating items entered by staff." >> $HOME/load.log
-	$HOME/avincomplete.pl -u
+	echo "== database $HOME/avincomplete.pl updating items entered by staff." >> $HOME/load.log
+	$HOME/avincomplete.pl -u >>$HOME/load.log 2>&1
 	echo "done." >> $HOME/load.log
-	echo "database $HOME/avincomplete.pl updating items from AVSNAGS cards." >> $HOME/load.log
-	$HOME/avincomplete.pl -U
+	echo "== database $HOME/avincomplete.pl updating items from AVSNAGS cards." >> $HOME/load.log
+	$HOME/avincomplete.pl -U >>$HOME/load.log 2>&1
 	echo "done." >> $HOME/load.log
-	$HOME/avincomplete.pl -t
+	echo "== database $HOME/avincomplete.pl discharging complete items." >> $HOME/load.log
+	$HOME/avincomplete.pl -t >>$HOME/load.log 2>&1
 	echo "done." >> $HOME/load.log
+	echo "====" >> $HOME/load.log
 else
-	echo "**Error: unable to find $HOME/avincomplete.pl" >> $HOME/load.log
+	echo "**Error: unable to find $HOME/avincomplete.pl" >>$HOME/load.log 2>&1
 fi
 # EOF

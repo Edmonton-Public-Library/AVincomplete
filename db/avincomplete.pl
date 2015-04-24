@@ -640,8 +640,8 @@ sub init
 			# discharge the item.
 			print STDERR "discharging $itemId, removing the entry from the database.\n";
 			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U'`;
-			# Uncomment the next line if you want items to be removed from the av incomplete database.
-			# `echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
+			# remove from the av incomplete database.
+			`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
 		}
 		exit;
 	}
