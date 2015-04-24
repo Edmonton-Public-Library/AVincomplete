@@ -70,7 +70,7 @@ my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
 my $DATE     = `date +%Y-%m-%d`;
 chomp( $DATE );
 
-my $VERSION  = qq{0.2};
+my $VERSION  = qq{0.3};
 
 # Trim function to remove whitespace from the start and end of the string.
 # param:  string to trim.
