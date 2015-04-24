@@ -24,11 +24,12 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Tue Apr 14 12:20:04 MDT 2015
 # Rev:    
+#   0.2 - Added '-t' and don't blow away the old log, just keep appending. 
 #   0.1 - Dev. 
 #
 ####################################################
 HOME=/home/ilsdev/projects/avincomplete/db
-echo `date` > $HOME/load.log
+echo `date` >> $HOME/load.log
 if [ -s $HOME/avincomplete.pl ]
 then
 	cd $HOME
@@ -43,6 +44,8 @@ then
 	echo "done." >> $HOME/load.log
 	echo "database $HOME/avincomplete.pl updating items from AVSNAGS cards." >> $HOME/load.log
 	$HOME/avincomplete.pl -U
+	echo "done." >> $HOME/load.log
+	$HOME/avincomplete.pl -t
 	echo "done." >> $HOME/load.log
 else
 	echo "**Error: unable to find $HOME/avincomplete.pl" >> $HOME/load.log
