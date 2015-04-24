@@ -46,6 +46,8 @@
 #               createholds.pl, chargeitems.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.4 - Add -D to discard items marked discard, replaces original use of -D dump to HTML.
+#                and records complete records before removing them.
 #          0.3 - Added -t to discharge items marked complete.
 #          0.2 - Fix to -u titles not updating, items in database not checked
 #                off customers' card. -U and -u refactored. 
@@ -70,7 +72,7 @@ my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
 my $DATE     = `date +%Y-%m-%d`;
 chomp( $DATE );
 
-my $VERSION  = qq{0.3};
+my $VERSION  = qq{0.4};
 
 # Trim function to remove whitespace from the start and end of the string.
 # param:  string to trim.
@@ -104,7 +106,7 @@ RIV-DISCARD, for a discard card.
  -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
  -d: Refreshes the avdiscardcards table of DISCARD cards. Can safely be run regularly especially
      if a new branch discard card is added. See '-c' for avsnag cards.
- -D<file>: Dump hold table to HTML file <file>.
+ -D: Process items marked as discard.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
  -t: Discharge items that are marked complete.
  -u: Updates database based on items entered into the database by the website.
@@ -616,7 +618,7 @@ sub getLibraryCode( $ )
 # return: 
 sub init
 {
-    my $opt_string = 'cCdD:ftuUx';
+    my $opt_string = 'cCdDftuUx';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	# This looks for items that are marked complete and discharges them from the card they are checked out to.
@@ -640,6 +642,7 @@ sub init
 			# discharge the item.
 			print STDERR "discharging $itemId, removing the entry from the database.\n";
 			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U'`;
+			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE >>complete.log 2>&1`;
 			# remove from the av incomplete database.
 			`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
 		}
@@ -676,10 +679,31 @@ sub init
 	}
 	if ( $opt{'D'} ) 
 	{
-		my $dumpFile = $opt{'D'};
-		open HTML, ">$dumpFile" or die "**error: unable to write to file '$dumpFile', $!\n";
-		print HTML `echo "SELECT * FROM avincomplete;" | sqlite3 -html $DB_FILE`;
-		close HTML;
+		# Here we take the items that are marked discarded and discharge them, then charge them to the branch's discard card.
+		# Find all the items marked complete.
+		my $selectDiscardItems = `echo 'SELECT ItemId FROM avincomplete WHERE Discard=1;' | sqlite3 $DB_FILE`;
+		my @data = split '\n', $selectDiscardItems;
+		while (@data)
+		{
+			# For all the items that staff entered, let's find the current location.
+			my $itemId = shift @data;
+			# Does the item exist on the ils or was it discarded?
+			if ( ! isInILS( $itemId ) )
+			{
+				# We could actually remove the record because if it doesn't exist it's just going to clog things up.
+				print STDERR "$itemId not found in ILS, removing the entry from the database.\n";
+				`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE`;
+				next;
+			}
+			my $branchDiscardCard = `echo "select UserId from avdiscardcards where Branch = (select Location from avincomplete where ItemId=$itemId) LIMIT 1;" | sqlite3 $DB_FILE`;
+			# discharge the item, then recharge the item to a branch's discard card.
+			print STDERR "discharging $itemId, charging to $branchDiscardCard.\n";
+			#`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U'`;
+			# record what you are about to remove.
+			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE >>discard.log 2>&1`;
+			# remove from the av incomplete database.
+			`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE`;
+		}
 		exit;
 	}
 	# Update database from items entered into the local database by the web site.
