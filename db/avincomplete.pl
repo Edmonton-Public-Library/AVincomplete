@@ -46,6 +46,9 @@
 #               createholds.pl, chargeitems.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.5 - Add test for checkout to anyone and logic to check item out to AVSnag if not checked out.
+#                This will stop reported items from appearing on the PULL hold lists when a copy level hold
+#                is placed.
 #          0.4 - Add -D to discard items marked discard, replaces original use of -D dump to HTML.
 #                and records complete records before removing them.
 #          0.3 - Added -t to discharge items marked complete.
@@ -72,7 +75,7 @@ my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
 my $DATE     = `date +%Y-%m-%d`;
 chomp( $DATE );
 
-my $VERSION  = qq{0.4};
+my $VERSION  = qq{0.5};
 
 # Trim function to remove whitespace from the start and end of the string.
 # param:  string to trim.
@@ -109,7 +112,7 @@ RIV-DISCARD, for a discard card.
  -D: Process items marked as discard.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
  -t: Discharge items that are marked complete.
- -u: Updates database based on items entered into the database by the website.
+ -u: Updates database based on items entered by staff on the web site. Safe to do anytime.
  -U: Updates database based on items on cards with $AVSNAG profile. Safe to run anytime,
      but should be run with a frequency that is inversely proportional to the amount of
      time staff are servicing AV incomplete.
@@ -492,6 +495,22 @@ sub isCheckedOutToCustomer( $ )
 	return 0;
 }
 
+# This function takes a item ID as an argument, and returns 1 if the 
+# current location is CHECKEDOUT and 0 otherwise.
+# param:  Item ID 
+# return: 1 if checked out to anyone (system or customer) and 0 otherwise.
+sub isCheckedOut( $ )
+{
+	my $itemId = shift;
+	# my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -om'`;
+	my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oIm | selcharge -iI -oUS | seluser -iU -oSB'`;
+	# On success: 'CHECKEDOUT|21221022896929|' on fail: ''
+	# Here we check if we get at least 12 digits because system cards are letters and L-PASS and ME have different 
+	# numbers but all more than 12.
+	return 1 if ( $locationCheck =~ m/CHECKEDOUT/ );
+	return 0;
+}
+
 # This function takes a item ID as an argument, updates the record with the current user's  
 # account information.
 # param:  Item ID 
@@ -596,7 +615,7 @@ sub alreadyInDatabase( $ )
 # This function finds the library that owns the card passed in as parameter 1.
 # param:  string to test like '604887|WMC-AVINCOMPLETE|' 
 # return  string of the library code, like 'WMC', or 'MNA' if the branch can't be determined.
-#         In that case, try running -c to update the 
+#         In that case, try running -c to update.
 sub getLibraryCode( $ )
 {
 	# Set up a default, should never get used, but if there is a failure for some reason it make 
@@ -611,6 +630,37 @@ sub getLibraryCode( $ )
 		chomp( $code );
 	}
 	return $code;
+}
+
+# Checks an item out to an AVSnag card. The function takes an item ID that is guaranteed not
+# to be already checked out. See isCheckedOut().
+# param:  item ID as a string.
+# return: <none>
+sub checkOutItemToAVSnag( $ )
+{
+	my $itemId = shift;
+	# Get the branch's snag card, but make sure we limit it to one card.
+	my $branchCard = `echo "select UserId from avsnagcards where Branch = (select Location from avincomplete where ItemId=$itemId) LIMIT 1;" | sqlite3 $DB_FILE`;
+	my $branch     = `echo "select Location from avincomplete where ItemId=$itemId;" | sqlite3 $DB_FILE`;
+	chomp( $branchCard );
+	chomp( $branch );
+	if ( $branchCard ne '' )
+	{
+		print "\n Branch SNAG card: '$branchCard' \n";
+		if ( $branch ne '' )
+		{
+			`echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | chargeitems.pl -b -u"$branchCard" -U'`;
+			print STDERR "Ok: item '$itemId' checked out to '$branchCard'.\n";
+		}
+		else # Couldn't find the branch for this avsnag card.
+		{
+			print STDERR "Couldn't find the branch for '$branchCard' for '$itemId'.\n";
+		}
+	}
+	else # Branch card not found for requested branch.
+	{
+		print STDERR "* warn: couldn't find a branch card because the branch name was empty on item '$itemId'\n";
+	}
 }
 
 # Kicks off the setting of various switches.
@@ -740,7 +790,15 @@ sub init
 				print STDERR "Nope not checked, or checked out to a system card.\n";
 				updatePreviousUser( $itemId );
 			}
+			# If the item isn't checked out at all to anyone, then check out to avsnag card 
+			# so item doesn't show up on PULL hold reports, when we place a copy hold for it.
+			if ( ! isCheckedOut( $itemId ) )
+			{
+				print STDERR "checking item out to an AVSNAG card for the current branch.\n";
+				checkOutItemToAVSnag( $itemId );
+			}
 			# Place the item on hold for the av snag card at the correct branch.
+			print STDERR "placing hold for $itemId.\n";
 			placeHoldForItem( $itemId );
 		}
 		exit;
