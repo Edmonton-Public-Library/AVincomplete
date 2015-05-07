@@ -46,6 +46,7 @@
 #               createholds.pl, chargeitems.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.6.01 - Fixed spelling mistake in usage.
 #          0.6 - Audit items in database and check item out to AVSnag if not checked out.
 #          0.5 - Add test for checkout to anyone and logic to check item out to AVSnag if not checked out.
 #                This will stop reported items from appearing on the PULL hold lists when a copy level hold
@@ -76,7 +77,7 @@ my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
 my $DATE     = `date +%Y-%m-%d`;
 chomp( $DATE );
 
-my $VERSION  = qq{0.6};
+my $VERSION  = qq{0.6.01};
 
 # Trim function to remove whitespace from the start and end of the string.
 # param:  string to trim.
@@ -96,7 +97,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-cCdftuUx] [-D<foo.bar>]
+	usage: $0 [-acCdftuUx] [-D<foo.bar>]
 Creates and manages av incomplete sqlite3 database.
 Note: -c and -d flags rebuild the avsnag cards and discard cards for a branch based on 
 profiles. The branch id must appear as the first 3 letters of its name like: SPW-AVSNAG, or
@@ -107,7 +108,7 @@ RIV-DISCARD, for a discard card.
      since items entered with -u are automatically checked out to a snag card if they are
      not currently checked out, and the process takes a long time since it looks at all 
      items in the database. It is safe to run since it doesn't update the local database
-     and mearly makes calls to the ILS to check and charge items. Another $0 
+     and merely makes calls to the ILS to check and charge items. Another $0 
      process may safely run at the same time if you have scheduled it to do so.
  -c: Refreshes the avsnagcards table of EPL-AVSNAG cards. These are the cards used to checkout 
      materials and place holds. Can safely be run regularly. AV incomplete cards themselves
