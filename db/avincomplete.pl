@@ -46,6 +46,7 @@
 #               createholds.pl, chargeitems.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.6 - Audit items in database and check item out to AVSnag if not checked out.
 #          0.5 - Add test for checkout to anyone and logic to check item out to AVSnag if not checked out.
 #                This will stop reported items from appearing on the PULL hold lists when a copy level hold
 #                is placed.
@@ -75,7 +76,7 @@ my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
 my $DATE     = `date +%Y-%m-%d`;
 chomp( $DATE );
 
-my $VERSION  = qq{0.5};
+my $VERSION  = qq{0.6};
 
 # Trim function to remove whitespace from the start and end of the string.
 # param:  string to trim.
@@ -101,6 +102,13 @@ Note: -c and -d flags rebuild the avsnag cards and discard cards for a branch ba
 profiles. The branch id must appear as the first 3 letters of its name like: SPW-AVSNAG, or
 RIV-DISCARD, for a discard card.
 
+ -a: Audits items in the database to ensure they are checked out and if not checks them out 
+     to the branch's av snag card. This option typically doesn't need to be run regularly
+     since items entered with -u are automatically checked out to a snag card if they are
+     not currently checked out, and the process takes a long time since it looks at all 
+     items in the database. It is safe to run since it doesn't update the local database
+     and mearly makes calls to the ILS to check and charge items. Another $0 
+     process may safely run at the same time if you have scheduled it to do so.
  -c: Refreshes the avsnagcards table of EPL-AVSNAG cards. These are the cards used to checkout 
      materials and place holds. Can safely be run regularly. AV incomplete cards themselves
      don't change all that often, but if a new one is added this should be run. See '-d'
@@ -668,9 +676,34 @@ sub checkOutItemToAVSnag( $ )
 # return: 
 sub init
 {
-    my $opt_string = 'cCdDftuUx';
+    my $opt_string = 'acCdDftuUx';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
+	if ( $opt{'a'} ) 
+	{
+		print STDERR "Checking items in database to ensure they are checked out.\n";
+		my $apiResults = `echo 'SELECT ItemId FROM avincomplete;' | sqlite3 $DB_FILE`;
+		my @data = split '\n', $apiResults;
+		while (@data)
+		{
+			# For all the items that staff entered, let's find the current location.
+			my $itemId = shift @data;
+			# Does the item exist on the ils or was it discarded?
+			if ( ! isInILS( $itemId ) )
+			{
+				print STDERR "$itemId not found in ILS.\n";
+				# Nothing else we can do with this, let's get the next item ID.
+				next;
+			}
+			# If the item isn't checked out at all to anyone, then check out to avsnag card 
+			# so item doesn't show up on PULL hold reports, when we place a copy hold for it.
+			if ( ! isCheckedOut( $itemId ) )
+			{
+				print STDERR "checking item out to an AVSNAG card for the current branch.\n";
+				checkOutItemToAVSnag( $itemId );
+			}
+		}
+	}
 	# This looks for items that are marked complete and discharges them from the card they are checked out to.
 	if ( $opt{'t'} ) 
 	{
