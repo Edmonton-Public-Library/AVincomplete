@@ -46,6 +46,7 @@
 #               createholds.pl, chargeitems.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.6.04 - Fix to discharge items.
 #          0.6.03 - Discharge item from user charge item to discard.
 #          0.6.02 - Remove holds from branch cards when item marked complete.
 #          0.6.01 - Fixed spelling mistake in usage.
@@ -79,7 +80,7 @@ my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
 my $DATE     = `date +%Y-%m-%d`;
 chomp( $DATE );
 
-my $VERSION  = qq{0.6.03};
+my $VERSION  = qq{0.6.04};
 
 # Trim function to remove whitespace from the start and end of the string.
 # param:  string to trim.
@@ -120,7 +121,10 @@ RIV-DISCARD, for a discard card.
  -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
  -d: Refreshes the avdiscardcards table of DISCARD cards. Can safely be run regularly especially
      if a new branch discard card is added. See '-c' for avsnag cards.
- -D: Process items marked as discard.
+ -D: Process items marked as discard. Tests items are in ILS and if so cancels any hold for the
+     branch AVSNAG card, discharges them from the card they are currently charged to, 
+     then quickly charges them to the branches' discard card, then logs the entry and removes
+     the entry from the avincomplete.db database.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
  -t: Discharge items that are marked complete, removing the copy level hold on any of the
      branches' AVSNAG cards.
@@ -808,11 +812,14 @@ sub init
 				next;
 			}
 			my $branchDiscardCard = `echo "select UserId from avdiscardcards where Branch = (select Location from avincomplete where ItemId=$itemId) LIMIT 1;" | sqlite3 $DB_FILE`;
+			chomp( $branchDiscardCard );
 			# Cancel any holds for the branches' avsnag cards
 			cancelHolds( $itemId );
 			# discharge the item, then recharge the item to a branch's discard card.
-			print STDERR "discharging $itemId, charging to $branchDiscardCard.\n";
-			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitemchargeitem.pl  -d"$branchDiscardCard" -U'`;
+			print STDERR "discharging $itemId.\n";
+			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U'`;
+			print STDERR "charging $itemId, to $branchDiscardCard.\n";
+			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | chargeitems.pl -b -u"$branchDiscardCard" -U'`;
 			# record what you are about to remove.
 			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE >>discard.log 2>&1`;
 			# remove from the av incomplete database.

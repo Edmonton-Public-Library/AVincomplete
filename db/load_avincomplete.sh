@@ -24,6 +24,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Tue Apr 14 12:20:04 MDT 2015
 # Rev:    
+#   0.4 - Add '-D' for removing discarded items.
 #   0.3 - Removed running '-t' in favour of a faster schedule on complete items.
 #         See markcomplete.sh. 
 #   0.2 - Added '-t' and don't blow away the old log, just keep appending. 
@@ -47,10 +48,10 @@ then
 	echo "== database $HOME/avincomplete.pl updating items from AVSNAGS cards." >> $HOME/load.log
 	$HOME/avincomplete.pl -U >>$HOME/load.log 2>&1
 	echo "done." >> $HOME/load.log
-	echo "== database $HOME/avincomplete.pl discharging complete items." >> $HOME/load.log
-	# $HOME/avincomplete.pl -t >>$HOME/load.log 2>&1
+	# echo "== database $HOME/avincomplete.pl processing discard items." >> $HOME/load.log
+	# $HOME/avincomplete.pl -D >>$HOME/load.log 2>&1
 	# echo "done." >> $HOME/load.log
-	# echo "====" >> $HOME/load.log
+	echo "====" >> $HOME/load.log
 else
 	echo "**Error: unable to find $HOME/avincomplete.pl" >>$HOME/load.log 2>&1
 fi

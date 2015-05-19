@@ -2,6 +2,8 @@
 #################################################################
 #
 # Rotate the log file and back up the database for AV incomplete
+# Version:
+#   0.1 - added save of discard.log
 #
 #################################################################
 WORK_DIR=/home/ilsdev/projects/avincomplete/db
@@ -18,5 +20,5 @@ gzip -f -9 $newlogfile
 cat /dev/null > $logfile
 
 # backup database and complete.log
-tar cvfz avincomplete.$timestamp.tgz avincomplete.db complete.log
+tar cvfz avincomplete.$timestamp.tgz avincomplete.db complete.log discard.log
 #EOF
