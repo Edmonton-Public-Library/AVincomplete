@@ -48,9 +48,9 @@ then
 	echo "== database $HOME/avincomplete.pl updating items from AVSNAGS cards." >> $HOME/load.log
 	$HOME/avincomplete.pl -U >>$HOME/load.log 2>&1
 	echo "done." >> $HOME/load.log
-	# echo "== database $HOME/avincomplete.pl processing discard items." >> $HOME/load.log
-	# $HOME/avincomplete.pl -D >>$HOME/load.log 2>&1
-	# echo "done." >> $HOME/load.log
+	echo "== database $HOME/avincomplete.pl processing discard items." >> $HOME/load.log
+	$HOME/avincomplete.pl -D >>$HOME/load.log 2>&1
+	echo "done." >> $HOME/load.log
 	echo "====" >> $HOME/load.log
 else
 	echo "**Error: unable to find $HOME/avincomplete.pl" >>$HOME/load.log 2>&1
