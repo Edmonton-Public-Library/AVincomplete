@@ -25,6 +25,7 @@
 	</div>
 	<div id="navbar" class="navbar-collapse collapse">
 	  <ul class="nav navbar-nav navbar-right">
+		<li><a href="https://staffweb.epl.ca/"><img src="https://avatars2.githubusercontent.com/u/4293855?v=3&s=20"/></a></li>
 		<li><a href="index.php"><span class="glyphicon glyphicon-home"></span></a></li>
 		<li><a href="branch_items.php?branch=ALL"><span class="glyphicon glyphicon-wrench"></span></a></li>
 		<li><a href="help.php"><span class="glyphicon glyphicon-info-sign"></span></a></li>

@@ -21,25 +21,25 @@
 				$branch = $_COOKIE['branch'];
 				echo "<option selected='$branch'>$branch</option>";
 			} ?>
-			<option value='MNA'>MNA</option>
-			<option value='MLW'>MLW</option>
-			<option value='WMC'>WMC</option>
-			<option value='LHL'>LHL</option>
-			<option value='LON'>LON</option>
-			<option value='JPL'>JPL</option>
-			<option value='HIG'>HIG</option>
-			<option value='WOO'>WOO</option>
-			<option value='STR'>STR</option>
-			<option value='CLV'>CLV</option>
-			<option value='MEA'>MEA</option>
 			<option value='ABB'>ABB</option>
 			<option value='CAL'>CAL</option>
+			<option value='CLV'>CLV</option>
+			<option value='CPL'>CPL</option>
 			<option value='CSD'>CSD</option>
+			<option value='HIG'>HIG</option>
 			<option value='IDY'>IDY</option>
+			<option value='JPL'>JPL</option>
 			<!-- <option value='LES'>LES</option> // Lewis estates when available. -->
+			<option value='LHL'>LHL</option>
+			<option value='LON'>LON</option>
+			<option value='MEA'>MEA</option>
+			<option value='MLW'>MLW</option>
+			<option value='MNA'>MNA</option>
 			<option value='RIV'>RIV</option>
 			<option value='SPW'>SPW</option>
-			<option value='CPL'>CPL</option>
+			<option value='STR'>STR</option>
+			<option value='WMC'>WMC</option>
+			<option value='WOO'>WOO</option>
 			<option value='ALL'>ALL</option>
 		</select>
 		<br>
@@ -50,7 +50,8 @@
 	</form>
 	<p>
 		<a href="#"><span class="glyphicon glyphicon-copyright-mark"></span></a> 2015 Edmonton Public Library&nbsp;
-		<a href="help.php"><span class="glyphicon glyphicon-info-sign"></span></a>
+		<a href="help.php"><span class="glyphicon glyphicon-info-sign"></span></a>&nbsp;
+		<a href="https://staffweb.epl.ca/"><img src="https://avatars2.githubusercontent.com/u/4293855?v=3&s=50"/></a>
 	</p>
 </div> <!-- /container -->
 <script>
