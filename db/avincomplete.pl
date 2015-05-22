@@ -43,7 +43,7 @@
 #
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Dependencies: seluser, selitem, selcatalog, selhold, selcharge, chargeitems.pl
-#               createholds.pl, chargeitems.pl.
+#               createholds.pl, cancelholds.pl, dischargeitems.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
 #          0.6.04 - Fix to discharge items.
