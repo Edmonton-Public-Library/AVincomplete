@@ -44,14 +44,14 @@ tar cvfz avincomplete.$timestamp.tgz avincomplete.db complete.log discard.log
 
 if [ -s avincomplete.$timestamp.tgz ]
 then
-	clean.pl -t"avincomplete.201*" -v -u
+	/usr/local/bin/clean.pl -t"avincomplete.201*" -v -u
 else
 	echo "*** WARNING **** couldn't clean up the avincomplete.201... files because the last backup failed!"
 fi
 ### Keep the number of old log files down to 10.
 if [ -s $newlogfile ]
 then
-	clean.pl -t"load.log.201*" -v -u
+	/usr/local/bin/clean.pl -t"load.log.201*" -v -u
 else
 	echo "*** WARNING **** couldn't clean up the load.log.201... files because the last backup failed!"
 fi

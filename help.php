@@ -37,6 +37,20 @@
 <div class="container-fluid">
 	<div class="col-sm-7">
 		<h1 class="sub-header">Help</h1>
+		<p>
+AV incomplete is meant to do as much of the work for staff as possible, thus freeing up your time
+for more important, and frankly, more interesting things. AV incomplete can do the following task:
+<ul>
+<li>Accept a typed or scanned bar code.</li>
+<li>AV incomplete will queue you about the status of this item. For example if the other parts are waiting at another branch.</li>
+<li>If you don't enter a itme id you will be taken to your selected branches AV incomplete list, where you can look up customer
+information, make notes on the item, mark an item complete, and even discard an item.</li>
+<li>The rest is taken care of. Behind the scenes AV incomplete will cancel holds on the item, discharge the item to make 
+complete itmes available for customers.</li>
+<li>Discarded items will have any holds cancelled and AV incomplete will charge the item to the selected branches' discard card.</li>
+</ul>
+For more information please refer to <a href="http://ilswiki.epl.ca/index.php/Avincomplete.pl">ILS Wiki</a>.
+		</p>
 		<h2 class="sub-header">Definition</h2>
 		<p>
 Any multi-part material (typically audio visual material, hence AV) whose 
@@ -58,8 +72,8 @@ Missing (or mis-matched) parts include:
 <a href="#" class="list-group-item">Disc 'n'</a>
 </div>
 This can also be thought of in terms of an 'active' ingredient, like a DVD disc or a 'inactive' ingredient, like an insert or box.
-		<h2 class="sub-header">Project</h2>
-		<p>
+<h2 class="sub-header">Project</h2>
+<p>
 Vicky is chairing the AV Incomplete group that is investigating how to reduce the 
 number of AVSNAG items that end up as DISCARD. The following represents the 
 proposed new AV incomplete method.
