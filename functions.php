@@ -26,6 +26,7 @@ require 'db.inc';
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.1 - Added action 'transit' to functional check. 
 #          0.0 - Dev. 
 #
 ####################################################################################
@@ -83,19 +84,26 @@ function mark_item_complete(&$db, $item)
 {
 	// sqlite> .schema
 	// TABLE avincomplete (
-	// ItemId INTEGER PRIMARY KEY NOT NULL,
-	// Title CHAR(256),
-	// CreateDate DATE DEFAULT CURRENT_DATE,
-	// UserKey INTEGER,
-	// Contact INTEGER DEFAULT 0,
-	// ContactDate DATE DEFAULT NULL,
-	// Complete INTEGER DEFAULT 0,
-	// CompleteDate DATE DEFAULT NULL,
-	// Discard  INTEGER DEFAULT 0,
-	// DiscardDate DATE DEFAULT NULL,
-	// Location CHAR(6) NOT NULL,
-	// Comments CHAR(256)
-	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
+	# ItemId INTEGER PRIMARY KEY NOT NULL,
+	# Title CHAR(256),
+	# CreateDate DATE DEFAULT CURRENT_DATE,
+	# UserKey INTEGER,
+	# UserId INTEGER,
+	# UserPhone CHAR(20),
+	# UserName  CHAR(100),
+	# UserEmail CHAR(100),
+	# Processed INTEGER DEFAULT 0,
+	# ProcessDate DATE DEFAULT NULL,
+	# Contact INTEGER DEFAULT 0,
+	# ContactDate DATE DEFAULT NULL,
+	# Complete INTEGER DEFAULT 0,
+	# CompleteDate DATE DEFAULT NULL,
+	# Discard  INTEGER DEFAULT 0,
+	# DiscardDate DATE DEFAULT NULL,
+	# Location CHAR(6) NOT NULL,
+	# TransitLocation CHAR(6) DEFAULT NULL,
+	# TransitDate DATE DEFAULT NULL,
+	# Comments CHAR(256)
 	$sql = <<<EOF_SQL
 UPDATE avincomplete SET Complete=1, CompleteDate=strftime('%Y-%m-%d', DATETIME('now')) WHERE ItemId=:id
 EOF_SQL;
@@ -115,19 +123,26 @@ function mark_item_discard(&$db, $item)
 {
 	// sqlite> .schema
 	// TABLE avincomplete (
-	// ItemId INTEGER PRIMARY KEY NOT NULL,
-	// Title CHAR(256),
-	// CreateDate DATE DEFAULT CURRENT_DATE,
-	// UserKey INTEGER,
-	// Contact INTEGER DEFAULT 0,
-	// ContactDate DATE DEFAULT NULL,
-	// Complete INTEGER DEFAULT 0,
-	// CompleteDate DATE DEFAULT NULL,
-	// Discard  INTEGER DEFAULT 0,
-	// DiscardDate DATE DEFAULT NULL,
-	// Location CHAR(6) NOT NULL,
-	// Comments CHAR(256)
-	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
+	# ItemId INTEGER PRIMARY KEY NOT NULL,
+	# Title CHAR(256),
+	# CreateDate DATE DEFAULT CURRENT_DATE,
+	# UserKey INTEGER,
+	# UserId INTEGER,
+	# UserPhone CHAR(20),
+	# UserName  CHAR(100),
+	# UserEmail CHAR(100),
+	# Processed INTEGER DEFAULT 0,
+	# ProcessDate DATE DEFAULT NULL,
+	# Contact INTEGER DEFAULT 0,
+	# ContactDate DATE DEFAULT NULL,
+	# Complete INTEGER DEFAULT 0,
+	# CompleteDate DATE DEFAULT NULL,
+	# Discard  INTEGER DEFAULT 0,
+	# DiscardDate DATE DEFAULT NULL,
+	# Location CHAR(6) NOT NULL,
+	# TransitLocation CHAR(6) DEFAULT NULL,
+	# TransitDate DATE DEFAULT NULL,
+	# Comments CHAR(256)
 	$sql = <<<EOF_SQL
 UPDATE avincomplete SET Discard=1, DiscardDate=strftime('%Y-%m-%d', DATETIME('now')) WHERE ItemId=:id
 EOF_SQL;
@@ -147,28 +162,27 @@ EOF_SQL;
 function mark_item_transit(&$db, $location, $item)
 {
 	// sqlite> .schema
-	// TABLE  avincomplete (
-	// ItemId INTEGER PRIMARY KEY NOT NULL,
-	// Title CHAR(256),
-	// CreateDate DATE DEFAULT CURRENT_DATE,
-	// UserKey INTEGER,
-	// UserId INTEGER,
-	// UserPhone CHAR(20),
-	// UserName  CHAR(100),
-	// UserEmail CHAR(100),
-	// Processed INTEGER DEFAULT 0,
-	// ProcessDate DATE DEFAULT NULL,
-	// Contact INTEGER DEFAULT 0,
-	// ContactDate DATE DEFAULT NULL,
-	// Complete INTEGER DEFAULT 0,
-	// CompleteDate DATE DEFAULT NULL,
-	// Discard  INTEGER DEFAULT 0,
-	// DiscardDate DATE DEFAULT NULL,
-	// Location CHAR(6) NOT NULL,
-	// TransitLocation CHAR(6) DEFAULT NULL,
-	// TransitDate DATE DEFAULT NULL,
-	// Comments CHAR(256)
-	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
+	// TABLE avincomplete (
+	# ItemId INTEGER PRIMARY KEY NOT NULL,
+	# Title CHAR(256),
+	# CreateDate DATE DEFAULT CURRENT_DATE,
+	# UserKey INTEGER,
+	# UserId INTEGER,
+	# UserPhone CHAR(20),
+	# UserName  CHAR(100),
+	# UserEmail CHAR(100),
+	# Processed INTEGER DEFAULT 0,
+	# ProcessDate DATE DEFAULT NULL,
+	# Contact INTEGER DEFAULT 0,
+	# ContactDate DATE DEFAULT NULL,
+	# Complete INTEGER DEFAULT 0,
+	# CompleteDate DATE DEFAULT NULL,
+	# Discard  INTEGER DEFAULT 0,
+	# DiscardDate DATE DEFAULT NULL,
+	# Location CHAR(6) NOT NULL,
+	# TransitLocation CHAR(6) DEFAULT NULL,
+	# TransitDate DATE DEFAULT NULL,
+	# Comments CHAR(256)
 	$sql = <<<EOF_SQL
 UPDATE avincomplete SET TransitLocation=:location, TransitDate=strftime('%Y-%m-%d', DATETIME('now')) WHERE ItemId=:id
 EOF_SQL;
@@ -189,19 +203,26 @@ function mark_customer_contacted(&$db, $item)
 {
 	// sqlite> .schema
 	// TABLE avincomplete (
-	// ItemId INTEGER PRIMARY KEY NOT NULL,
-	// Title CHAR(256),
-	// CreateDate DATE DEFAULT CURRENT_DATE,
-	// UserKey INTEGER,
-	// Contact INTEGER DEFAULT 0,
-	// ContactDate DATE DEFAULT NULL,
-	// Complete INTEGER DEFAULT 0,
-	// CompleteDate DATE DEFAULT NULL,
-	// Discard  INTEGER DEFAULT 0,
-	// DiscardDate DATE DEFAULT NULL,
-	// Location CHAR(6) NOT NULL,
-	// Comments CHAR(256)
-	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
+	# ItemId INTEGER PRIMARY KEY NOT NULL,
+	# Title CHAR(256),
+	# CreateDate DATE DEFAULT CURRENT_DATE,
+	# UserKey INTEGER,
+	# UserId INTEGER,
+	# UserPhone CHAR(20),
+	# UserName  CHAR(100),
+	# UserEmail CHAR(100),
+	# Processed INTEGER DEFAULT 0,
+	# ProcessDate DATE DEFAULT NULL,
+	# Contact INTEGER DEFAULT 0,
+	# ContactDate DATE DEFAULT NULL,
+	# Complete INTEGER DEFAULT 0,
+	# CompleteDate DATE DEFAULT NULL,
+	# Discard  INTEGER DEFAULT 0,
+	# DiscardDate DATE DEFAULT NULL,
+	# Location CHAR(6) NOT NULL,
+	# TransitLocation CHAR(6) DEFAULT NULL,
+	# TransitDate DATE DEFAULT NULL,
+	# Comments CHAR(256)
 	$sql = <<<EOF_SQL
 UPDATE avincomplete SET Contact=1, ContactDate=strftime('%Y-%m-%d', DATETIME('now')) WHERE ItemId=:id
 EOF_SQL;
@@ -226,18 +247,26 @@ function create_new_item(&$db, $item, $branch)
 	$title = "(title will be updated shortly)";
 	// sqlite> .schema
 	// TABLE avincomplete (
-	// ItemId INTEGER PRIMARY KEY NOT NULL,
-	// Title CHAR(256),
-	// CreateDate DATE DEFAULT CURRENT_DATE,
-	// UserKey INTEGER,
-	// Contact INTEGER DEFAULT 0,
-	// ContactDate DATE DEFAULT NULL,
-	// Complete INTEGER DEFAULT 0,
-	// CompleteDate DATE DEFAULT NULL,
-	// Discard  INTEGER DEFAULT 0,
-	// DiscardDate DATE DEFAULT NULL,
-	// Location CHAR(6) NOT NULL,
-	// Comments CHAR(256)
+	# ItemId INTEGER PRIMARY KEY NOT NULL,
+	# Title CHAR(256),
+	# CreateDate DATE DEFAULT CURRENT_DATE,
+	# UserKey INTEGER,
+	# UserId INTEGER,
+	# UserPhone CHAR(20),
+	# UserName  CHAR(100),
+	# UserEmail CHAR(100),
+	# Processed INTEGER DEFAULT 0,
+	# ProcessDate DATE DEFAULT NULL,
+	# Contact INTEGER DEFAULT 0,
+	# ContactDate DATE DEFAULT NULL,
+	# Complete INTEGER DEFAULT 0,
+	# CompleteDate DATE DEFAULT NULL,
+	# Discard  INTEGER DEFAULT 0,
+	# DiscardDate DATE DEFAULT NULL,
+	# Location CHAR(6) NOT NULL,
+	# TransitLocation CHAR(6) DEFAULT NULL,
+	# TransitDate DATE DEFAULT NULL,
+	# Comments CHAR(256)
 	$sql = <<<EOF_SQL
 INSERT OR IGNORE INTO avincomplete (ItemId, Title, CreateDate, Location) VALUES (:id, :title, strftime('%Y-%m-%d', DATETIME('now')), :branch);
 EOF_SQL;
@@ -274,19 +303,26 @@ function add_comments(&$db, $item, $branch, $comment){
 	// }
 	// sqlite> .schema
 	// TABLE avincomplete (
-	// ItemId INTEGER PRIMARY KEY NOT NULL,
-	// Title CHAR(256),
-	// CreateDate DATE DEFAULT CURRENT_DATE,
-	// UserKey INTEGER,
-	// Contact INTEGER DEFAULT 0,
-	// ContactDate DATE DEFAULT NULL,
-	// Complete INTEGER DEFAULT 0,
-	// CompleteDate DATE DEFAULT NULL,
-	// Discard  INTEGER DEFAULT 0,
-	// DiscardDate DATE DEFAULT NULL,
-	// Location CHAR(6) NOT NULL,
-	// Comments CHAR(256)
-	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
+	# ItemId INTEGER PRIMARY KEY NOT NULL,
+	# Title CHAR(256),
+	# CreateDate DATE DEFAULT CURRENT_DATE,
+	# UserKey INTEGER,
+	# UserId INTEGER,
+	# UserPhone CHAR(20),
+	# UserName  CHAR(100),
+	# UserEmail CHAR(100),
+	# Processed INTEGER DEFAULT 0,
+	# ProcessDate DATE DEFAULT NULL,
+	# Contact INTEGER DEFAULT 0,
+	# ContactDate DATE DEFAULT NULL,
+	# Complete INTEGER DEFAULT 0,
+	# CompleteDate DATE DEFAULT NULL,
+	# Discard  INTEGER DEFAULT 0,
+	# DiscardDate DATE DEFAULT NULL,
+	# Location CHAR(6) NOT NULL,
+	# TransitLocation CHAR(6) DEFAULT NULL,
+	# TransitDate DATE DEFAULT NULL,
+	# Comments CHAR(256)
 	$sql = <<<EOF_SQL
 UPDATE avincomplete SET Comments=:comment WHERE ItemId=:id
 EOF_SQL;
