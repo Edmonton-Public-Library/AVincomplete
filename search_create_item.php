@@ -124,7 +124,7 @@ $db->close();
             <p id='info-dialog'>Oops, you shouldn't be seeing this</p>
         </div>
         <div class='modal-footer'>
-            <button type='button' class='btn btn-default' data-dismiss='modal'>Close</button>
+            <a href='index.php'><button type='button' class='btn btn-default'>Close</button></a>
         </div>
     </div>
   </div>
