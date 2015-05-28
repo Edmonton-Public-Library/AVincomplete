@@ -22,6 +22,8 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Dependencies: clean.pl
 # Version:
+#   0.3 - Fix bug that isn't cleaning up old logs. Moving to one 
+#         tarchive and into a backup directory.
 #   0.2 - Added clean up if backup successful.
 #   0.1 - added save of discard.log
 #
@@ -34,25 +36,14 @@ if [ ! -f $logfile ]; then
   exit 1
 fi
 timestamp=`date +%Y%m%d`
-newlogfile=$logfile.$timestamp
-cp $logfile $newlogfile
-gzip -f -9 $newlogfile
+# backup database and complete.log
+tar cvfz avincomplete.$timestamp.tgz avincomplete.db complete.log discard.log $logfile
 cat /dev/null > $logfile
 ### Keep the number of old log files down to 10.
-# backup database and complete.log
-tar cvfz avincomplete.$timestamp.tgz avincomplete.db complete.log discard.log
-
 if [ -s avincomplete.$timestamp.tgz ]
 then
 	/usr/local/bin/clean.pl -t"avincomplete.201*" -v -u
 else
 	echo "*** WARNING **** couldn't clean up the avincomplete.201... files because the last backup failed!"
-fi
-### Keep the number of old log files down to 10.
-if [ -s $newlogfile ]
-then
-	/usr/local/bin/clean.pl -t"load.log.201*" -v -u
-else
-	echo "*** WARNING **** couldn't clean up the load.log.201... files because the last backup failed!"
 fi
 #EOF
