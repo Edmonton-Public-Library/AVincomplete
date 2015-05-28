@@ -97,7 +97,7 @@ function mark_item_complete(&$db, $item)
 	// Comments CHAR(256)
 	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
 	$sql = <<<EOF_SQL
-UPDATE avincomplete SET Complete=1, CompleteDate=strftime('%Y%m%d', DATETIME('now')) WHERE ItemId=:id
+UPDATE avincomplete SET Complete=1, CompleteDate=strftime('%Y-%m-%d', DATETIME('now')) WHERE ItemId=:id
 EOF_SQL;
 	$stmt = $db->prepare($sql);
 	$stmt->bindValue(':id', $item, SQLITE3_INTEGER);
@@ -129,9 +129,51 @@ function mark_item_discard(&$db, $item)
 	// Comments CHAR(256)
 	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
 	$sql = <<<EOF_SQL
-UPDATE avincomplete SET Discard=1, DiscardDate=strftime('%Y%m%d', DATETIME('now')) WHERE ItemId=:id
+UPDATE avincomplete SET Discard=1, DiscardDate=strftime('%Y-%m-%d', DATETIME('now')) WHERE ItemId=:id
 EOF_SQL;
 	$stmt = $db->prepare($sql);
+	$stmt->bindValue(':id', $item, SQLITE3_INTEGER);
+	$stmt->execute();
+	$db->close();
+	return true;
+}
+
+###
+# Marks an item for discard.
+# param:  $db - database object.
+# param:  $location - The destination of the item being transitted.
+# param:  $item - the item id of the item to be created.
+# return: 
+function mark_item_transit(&$db, $location, $item)
+{
+	// sqlite> .schema
+	// TABLE  avincomplete (
+	// ItemId INTEGER PRIMARY KEY NOT NULL,
+	// Title CHAR(256),
+	// CreateDate DATE DEFAULT CURRENT_DATE,
+	// UserKey INTEGER,
+	// UserId INTEGER,
+	// UserPhone CHAR(20),
+	// UserName  CHAR(100),
+	// UserEmail CHAR(100),
+	// Processed INTEGER DEFAULT 0,
+	// ProcessDate DATE DEFAULT NULL,
+	// Contact INTEGER DEFAULT 0,
+	// ContactDate DATE DEFAULT NULL,
+	// Complete INTEGER DEFAULT 0,
+	// CompleteDate DATE DEFAULT NULL,
+	// Discard  INTEGER DEFAULT 0,
+	// DiscardDate DATE DEFAULT NULL,
+	// Location CHAR(6) NOT NULL,
+	// TransitLocation CHAR(6) DEFAULT NULL,
+	// TransitDate DATE DEFAULT NULL,
+	// Comments CHAR(256)
+	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
+	$sql = <<<EOF_SQL
+UPDATE avincomplete SET TransitLocation=:location, TransitDate=strftime('%Y-%m-%d', DATETIME('now')) WHERE ItemId=:id
+EOF_SQL;
+	$stmt = $db->prepare($sql);
+	$stmt->bindValue(':location', $location, SQLITE3_TEXT);
 	$stmt->bindValue(':id', $item, SQLITE3_INTEGER);
 	$stmt->execute();
 	$db->close();
@@ -306,6 +348,13 @@ if (! empty($_GET)) {
 		} elseif ($_GET['action'] === 'discard'){ # Discard item flag set on item in database.
 			if (mark_item_discard($db, $item)){
 				echo "Item <kbd>$item</kbd> set to be discarded.";
+			} else {
+				$msg = "Function '" . $_GET['action'] . "' failed in functions.php.";
+				header("Location:error.php?msg=$msg");
+			}
+		} elseif ($_GET['action'] === 'transit'){ # transit item flag set on item in database.
+			if (mark_item_transit($db, $branch, $item)){
+				echo "Place label on <kbd>$item</kbd> and put it in the appropriate red bin.";
 			} else {
 				$msg = "Function '" . $_GET['action'] . "' failed in functions.php.";
 				header("Location:error.php?msg=$msg");

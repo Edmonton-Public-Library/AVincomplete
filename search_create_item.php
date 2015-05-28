@@ -91,10 +91,11 @@ if (! $row['count']){
 	if ($row['Location']){
 		if ($row['Location'] === $branch){
 			echo "I think the item should be here at <kbd>$branch</kbd>, check the AV shelf.";
-			echo "</p><p><a href='functions.php?action=complete&item_id=$item&branch=$branch'><button type='button' class='btn btn-primary btn-lg'>Mark it complete?</button></a>";
+			// echo "</p><p><a href='functions.php?action=complete&item_id=$item&branch=$branch'><button type='button' class='btn btn-primary btn-lg'>Mark complete?</button></a>";
+			echo "</p><p><a my-action='complete' href='#' item_id='$item' branch='$branch' class='av-button btn btn-default btn-primary btn-lg' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-ok'></span></a>";
 		} else {
 			echo "Transit to <kbd>".$row['Location']."</kbd>, and collect a star.<span class='glyphicon glyphicon-star'></span>";
-			echo "</p><p><a href='functions.php?action=complete&item_id=$item&branch=$branch'><button type='button' class='btn btn-primary btn-lg'>Transit to ".$row['Location']."?</button></a>";
+			echo "</p><p><a my-action='transit' href='#' item_id='$item' branch='$branch' class='av-button btn btn-default btn-primary btn-lg' data-toggle='modal' data-target='.bs-example-modal-lg'>Send to ".$row['Location']."?</a>";
 		}
 	} else {
 		echo "I have this item registered, but the branch isn't specified, <br/>so I can't tell you where to send it. Do you want to ask around?";
@@ -112,7 +113,7 @@ $db->close();
 	</div> <!-- columns -->
 </div> <!-- container -->
 <!-- Modal dialog box -->
-<div class='modal fade bs-example-modal-lg' tabindex='-1' role='dialog' aria-labelledby='myLargeModalLabel' aria-hidden='true'>
+<div class='modal fade bs-example-modal-lg' tabindex='-1' role='dialog' aria-labelledby='commentsModalLabel' aria-hidden='true'>
   <div class='modal-dialog modal-sm'>
     <div class='modal-content'>
       <div class='modal-header'>
