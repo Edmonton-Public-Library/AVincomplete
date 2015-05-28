@@ -3,3 +3,4 @@
 *.tgz
 db/avincomplete.db
 db/load.log
+db/backup
