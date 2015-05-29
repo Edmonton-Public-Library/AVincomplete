@@ -35,33 +35,33 @@
 </nav>
 
 <div class="container-fluid">
-	<table id="items-table" class="display" cellspacing="0" width="100%">
-		<thead>
-			<tr>
-				<th>Item ID</th>
-				<th>Title</th>
-				<th>Date</th>
-				<th>Comments</th>
-				<th>Customer</th>
-				<th>Contact</th>
-				<th>Complete</th>
-				<th>Discard</th>
-			</tr>
-		</thead>
-		
-		<tfoot>
-			<tr>
-				<th>Item ID</th>
-				<th>Title</th>
-				<th>Date</th>
-				<th>Comments</th>
-				<th>Customer</th>
-				<th>Contact</th>
-				<th>Complete</th>
-				<th>Discard</th>
-			</tr>
-		</tfoot>
-		<tbody>
+<table id="items-table" class="display" cellspacing="0" width="100%">
+	<thead>
+		<tr>
+			<th>Item ID</th>
+			<th>Title</th>
+			<th>Date</th>
+			<th>Comments</th>
+			<th>Customer</th>
+			<th>Contact</th>
+			<th>Complete</th>
+			<th>Discard</th>
+		</tr>
+	</thead>
+	
+	<tfoot>
+		<tr>
+			<th>Item ID</th>
+			<th>Title</th>
+			<th>Date</th>
+			<th>Comments</th>
+			<th>Customer</th>
+			<th>Contact</th>
+			<th>Complete</th>
+			<th>Discard</th>
+		</tr>
+	</tfoot>
+	<tbody>
 <?php 
 ini_set('error_reporting', E_ALL);
 // phpinfo();
@@ -84,38 +84,83 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	$dateCreated   = $row['CreateDate'];
 	// replace the spaces because they break the sorting.
 	$date          = preg_replace("/\-/", "/", $row['CreateDate']);
-	echo "  <tr>";
-	echo "      <td>" . $row['ItemId'] . "</td>";
-	echo "      <td>" . $row['Title'] . "</td>";
-	echo "      <td>" . $date. "</td>";
+	echo "	<tr>
+		<td>" . $row['ItemId'] . "</td>
+		<td>" . $row['Title'] . "</td>
+		<td>" . $date. "</td>\n";
 	# TODO add function to bring up a modal data entry window for comments.
 	if (strlen($row['Comments']) > 0){
-		echo "      <td><a my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='comment btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#commentsModal'><span class='glyphicon glyphicon-pencil'></span></a></td>";
+		echo "		<td>
+			<a my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
+				class='comment btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#commentsModal'>
+				<span class='glyphicon glyphicon-pencil'></span>
+			</a>
+		</td>\n";
 	} else {
-		echo "      <td><a my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='comment btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#commentsModal'><span class='glyphicon glyphicon-pencil'></span></a></td>";
+		echo "		<td>
+			<a my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
+				class='comment btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#commentsModal'>
+				<span class='glyphicon glyphicon-pencil'></span>
+			</a>
+		</td>\n";
 	}
-	echo "      <td><a my-action='info' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='info btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-question-sign'></span></a></td>";
+	echo "		<td>
+			<a my-action='info' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
+				class='info btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				<span class='glyphicon glyphicon-question-sign'></span>
+			</a>
+		</td>\n";
 	if ($row['Contact'] == 1){
-		echo "      <td><a my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-earphone'></span>?</a></td>";
+		echo "		<td>
+			<a my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
+				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				<span class='glyphicon glyphicon-earphone'></span>?
+			</a>
+		</td>\n";
 	} else {
-		echo "      <td><a my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-earphone'></span>?</a></td>";
+		echo "		<td>
+			<a my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
+				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				<span class='glyphicon glyphicon-earphone'></span>?
+			</a>
+		</td>\n";
 	}
 	if ($row['Complete'] == 1){
-		echo "      <td><a my-action='complete' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-ok'></span></a></td>";
+		echo "		<td>
+			<a my-action='complete' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
+				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				<span class='glyphicon glyphicon-ok'></span>
+			</a>
+		</td>\n";
 	} else {
-		echo "      <td><a my-action='complete' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-ok'></span></a></td>";
+		echo "		<td>
+			<a my-action='complete' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
+				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				<span class='glyphicon glyphicon-ok'></span>
+			</a>
+		</td>\n";
 	}
 	if ($row['Discard'] == 1){
-		echo "      <td><a my-action='discard' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-trash'></span></a></td>";
+		echo "		<td>
+			<a my-action='discard' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
+				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				<span class='glyphicon glyphicon-trash'></span>
+			</a>
+		</td>\n";
 	} else {
-		echo "      <td><a my-action='discard' href='#' item_id='".$itemId."' branch='".$row['Location']."' class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-trash'></span></a></td>";
+		echo "		<td>
+			<a my-action='discard' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
+				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				<span class='glyphicon glyphicon-trash'></span>
+			</a>
+		</td>\n";
 	}
-	echo "  </tr>";
+	echo "	</tr>\n";
 }
 $db->close();
 ?>
-		</tbody>
-	</table>
+	</tbody>
+</table>
 </div>
 <!-- Modal dialog box -->
 <div class='modal fade bs-example-modal-lg' tabindex='-1' role='dialog' aria-labelledby='commentsModalLabel' aria-hidden='true'>
@@ -164,9 +209,9 @@ $db->close();
 var isDescending = false;
 $(document).ready(function(){
 	// This command causes the functionality to break on additional pages. TODO: Why?
-	//$('#items-table').DataTable({
-    //    "order": [[ 2, "asc" ]] // order on date entered.
-    //} );
+	// $('#items-table').DataTable({
+       // "order": [[ 2, "asc" ]] // order on date entered.
+    // } );
 	// Handles comments modal dialog box. add the action branch and item to the modal so we 
 	// can fire an ajax request and know what we are talking about.
 	$("a.comment").click(function(){
