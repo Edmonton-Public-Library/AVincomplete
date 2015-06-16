@@ -106,21 +106,21 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	}
 	echo "		<td>
 			<a my-action='info' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
-				class='info btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				class='info btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
 				<span class='glyphicon glyphicon-question-sign'></span>
 			</a>
 		</td>\n";
 	if ($row['Contact'] == 1){
 		echo "		<td>
 			<a my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
-				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
 				<span class='glyphicon glyphicon-earphone'></span>?
 			</a>
 		</td>\n";
 	} else {
 		echo "		<td>
 			<a my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
-				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
 				<span class='glyphicon glyphicon-earphone'></span>?
 			</a>
 		</td>\n";
@@ -128,14 +128,14 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	if ($row['Complete'] == 1){
 		echo "		<td>
 			<a my-action='complete' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
-				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
 				<span class='glyphicon glyphicon-ok'></span>
 			</a>
 		</td>\n";
 	} else {
 		echo "		<td>
 			<a my-action='complete' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
-				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
 				<span class='glyphicon glyphicon-ok'></span>
 			</a>
 		</td>\n";
@@ -143,14 +143,14 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	if ($row['Discard'] == 1){
 		echo "		<td>
 			<a my-action='discard' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
-				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
 				<span class='glyphicon glyphicon-trash'></span>
 			</a>
 		</td>\n";
 	} else {
 		echo "		<td>
 			<a my-action='discard' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
-				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='.bs-example-modal-lg'>
+				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
 				<span class='glyphicon glyphicon-trash'></span>
 			</a>
 		</td>\n";
@@ -159,11 +159,8 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 }
 $db->close();
 ?>
-	</tbody>
-</table>
-</div>
 <!-- Modal dialog box -->
-<div class='modal fade bs-example-modal-lg' tabindex='-1' role='dialog' aria-labelledby='commentsModalLabel' aria-hidden='true'>
+<div class='modal fade bs-example-modal-lg' id="infoModal" tabindex='-1' role='dialog' aria-labelledby='commentsModalLabel' aria-hidden='true'>
   <div class='modal-dialog modal-sm'>
     <div class='modal-content'>
       <div class='modal-header'>
@@ -204,13 +201,18 @@ $db->close();
   </div>
 </div>
 <!-- End modal text box -->
+	</tbody>
+</table>
+</div>
+
 <script>
 
 var isDescending = false;
 $(document).ready(function(){
 	// This command causes the functionality to break on additional pages. TODO: Why?
-	// $('#items-table').DataTable({
-       // "order": [[ 2, "asc" ]] // order on date entered.
+	// $('#items-table').dataTable({
+       // order: [[ 2, "dsc" ]], // order on date entered.
+	   // stateSave: true,
     // } );
 	// Handles comments modal dialog box. add the action branch and item to the modal so we 
 	// can fire an ajax request and know what we are talking about.

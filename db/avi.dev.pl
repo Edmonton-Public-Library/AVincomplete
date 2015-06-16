@@ -43,9 +43,11 @@
 #
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Dependencies: seluser, selitem, selcatalog, selhold, selcharge, chargeitems.pl
-#               createholds.pl, chargeitems.pl.
+#               createholds.pl, cancelholds.pl, dischargeitems.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.7.00 - Add -n to notify customers of missing components.
+#          0.6.04 - Fix to discharge items.
 #          0.6.03 - Discharge item from user charge item to discard.
 #          0.6.02 - Remove holds from branch cards when item marked complete.
 #          0.6.01 - Fixed spelling mistake in usage.
@@ -59,6 +61,8 @@
 #          0.2 - Fix to -u titles not updating, items in database not checked
 #                off customers' card. -U and -u refactored. 
 #          0.1 - Dev. 
+#
+# Dependencies: mailbot.pl
 #
 ####################################################
 
@@ -79,7 +83,7 @@ my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
 my $DATE     = `date +%Y-%m-%d`;
 chomp( $DATE );
 
-my $VERSION  = qq{0.6.03};
+my $VERSION  = qq{0.7.00};
 
 # Trim function to remove whitespace from the start and end of the string.
 # param:  string to trim.
@@ -120,8 +124,13 @@ RIV-DISCARD, for a discard card.
  -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
  -d: Refreshes the avdiscardcards table of DISCARD cards. Can safely be run regularly especially
      if a new branch discard card is added. See '-c' for avsnag cards.
- -D: Process items marked as discard.
+ -D: Process items marked as discard. Tests items are in ILS and if so cancels any hold for the
+     branch AVSNAG card, discharges them from the card they are currently charged to, 
+     then quickly charges them to the branches' discard card, then logs the entry and removes
+     the entry from the avincomplete.db database.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
+ -n: Send out notifications of incomplete materials. Customers with emails will be emailed. 
+     Add a note to accounts that don't have emails.
  -t: Discharge items that are marked complete, removing the copy level hold on any of the
      branches' AVSNAG cards.
  -u: Updates database based on items entered by staff on the web site. Safe to do anytime.
@@ -162,7 +171,9 @@ EOF
         # Location CHAR(6) NOT NULL,
         # TransitLocation CHAR(6) DEFAULT NULL,
         # TransitDate DATE DEFAULT NULL,
-        # Comments CHAR(256)
+        # Comments CHAR(256),
+        # Notified  INTEGER DEFAULT 0,
+        # NoticeDate DATE DEFAULT NULL
 # );
 # CREATE TABLE avsnagcards (
         # UserKey INTEGER PRIMARY KEY NOT NULL,
@@ -358,7 +369,9 @@ CREATE TABLE avincomplete (
 	Location CHAR(6) NOT NULL,
 	TransitLocation CHAR(6) DEFAULT NULL,
 	TransitDate DATE DEFAULT NULL,
-	Comments CHAR(256)
+	Comments CHAR(256),
+	Notified  INTEGER DEFAULT 0,
+	NoticeDate DATE DEFAULT NULL
 );
 END_SQL
 	$DBH->do($SQL);
@@ -700,7 +713,7 @@ sub cancelHolds( $ )
 # return: 
 sub init
 {
-    my $opt_string = 'acCdDftuUx';
+    my $opt_string = 'acCdDfntuUx';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	# Audit all items in the database to ensure that if they are not checked out, that they get checked out to
@@ -808,11 +821,14 @@ sub init
 				next;
 			}
 			my $branchDiscardCard = `echo "select UserId from avdiscardcards where Branch = (select Location from avincomplete where ItemId=$itemId) LIMIT 1;" | sqlite3 $DB_FILE`;
+			chomp( $branchDiscardCard );
 			# Cancel any holds for the branches' avsnag cards
 			cancelHolds( $itemId );
 			# discharge the item, then recharge the item to a branch's discard card.
-			print STDERR "discharging $itemId, charging to $branchDiscardCard.\n";
-			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitemchargeitem.pl  -d"$branchDiscardCard" -U'`;
+			print STDERR "discharging $itemId.\n";
+			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U'`;
+			print STDERR "charging $itemId, to $branchDiscardCard.\n";
+			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | chargeitems.pl -b -u"$branchDiscardCard" -U'`;
 			# record what you are about to remove.
 			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE >>discard.log 2>&1`;
 			# remove from the av incomplete database.
@@ -995,6 +1011,26 @@ END_SQL
 		}
 		$DBH->disconnect();
 	} # end of -d processing (discard cards for a branch.
+	# Notify customers about the missing parts of materials they borrowed.
+	if ( $opt{'n'} )
+	{
+		# Comments CHAR(256), 
+		# Notified  INTEGER DEFAULT 0, 
+		# NoticeDate DATE DEFAULT NULL
+		`echo 'SELECT UserId, Title, Comments FROM avincomplete WHERE Comments NOT NULL AND Notified=0;' | sqlite3 $DB_FILE >customers.lst`;
+		# produces: 
+		# 21221023803338|The foolish tortoise [sound recording] / written by Richard Buckley ; [illustrated by] Eric Carle|disc is missing
+		# 21221021920217|Yaiba. Ninja gaiden Z [game] / [developed by Comcept, Spark Unlimited]. --|disc is missing
+		# 21221021499063|Glee. The final season [videorecording]|disc 1 is missing
+		# copy list to EPLAPP.
+		# activate mailbot.pl in directory
+		# /s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/notify_customers.sh
+		## mailerbot.pl -c customer.lst -n notice.txt >>unmailed_customers.lst
+		# Set notified date on entry.
+		`echo 'UPDATE avincomplete SET Notified=1, NoticeDate="$DATE" WHERE Comments NOT NULL AND Notified=0;' | sqlite3 $DB_FILE`;
+		# How to get the an item page registration
+		# http://ilsdev1.epl.ca/AV_incomplete/search_create_item.php?item_id=31221099948528&branch=IDY
+	}
 }
 
 init();
