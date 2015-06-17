@@ -46,9 +46,13 @@ then
 			echo "== notifying customers of missing components." >> $HOME/notification.log
 			echo "reading customer file..."
 			echo "reading customer file..." >> $HOME/notification.log
-			/s/sirsi/Unicorn/Bincustom/mailerbot.pl -c customer.lst -n notice.txt >>unmailed_customers.lst 2>>err.log
+			/s/sirsi/Unicorn/Bincustom/mailerbot.pl -c"$HOME/customers.lst" -n"$HOME/notice.txt" >>$HOME/unmailed_customers.lst 2>>$HOME/err.log
 			echo "done."
 			echo "done." >> $HOME/notification.log
+			echo "Saving list of mailed customers." 
+			echo "Saving list of mailed customers." >> $HOME/notification.log
+			cat $HOME/customers.lst >>$HOME/notification.log
+			rm $HOME/customers.lst
 			echo "===="
 			echo "====" >> $HOME/notification.log
 		else
@@ -64,4 +68,6 @@ then
 else
 	echo "**Error: unable to find mailerbot.pl" 
 	echo "**Error: unable to find mailerbot.pl" >>$HOME/notification.log 2>&1
+	exit 3
 fi
+exit 0

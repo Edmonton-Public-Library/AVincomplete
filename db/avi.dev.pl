@@ -129,8 +129,8 @@ RIV-DISCARD, for a discard card.
      then quickly charges them to the branches' discard card, then logs the entry and removes
      the entry from the avincomplete.db database.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
- -n: Send out notifications of incomplete materials. Customers with emails will be emailed. 
-     Add a note to accounts that don't have emails.
+ -n: Send out notifications of incomplete materials. Customers with emails will be emailed
+     from the production server.
  -t: Discharge items that are marked complete, removing the copy level hold on any of the
      branches' AVSNAG cards.
  -u: Updates database based on items entered by staff on the web site. Safe to do anytime.
@@ -1014,22 +1014,28 @@ END_SQL
 	# Notify customers about the missing parts of materials they borrowed.
 	if ( $opt{'n'} )
 	{
-		# Comments CHAR(256), 
-		# Notified  INTEGER DEFAULT 0, 
-		# NoticeDate DATE DEFAULT NULL
-		`echo 'SELECT UserId, Title, Comments FROM avincomplete WHERE Comments NOT NULL AND Notified=0;' | sqlite3 $DB_FILE >customers.lst`;
+		my $customerFile = "customers.lst";
+		`echo 'SELECT UserId, Title, Comments FROM avincomplete WHERE Comments NOT NULL AND Notified=0;' | sqlite3 $DB_FILE >$customerFile`;
 		# produces: 
 		# 21221023803338|The foolish tortoise [sound recording] / written by Richard Buckley ; [illustrated by] Eric Carle|disc is missing
 		# 21221021920217|Yaiba. Ninja gaiden Z [game] / [developed by Comcept, Spark Unlimited]. --|disc is missing
 		# 21221021499063|Glee. The final season [videorecording]|disc 1 is missing
 		# copy list to EPLAPP.
-		# activate mailbot.pl in directory
-		# /s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/notify_customers.sh
-		## mailerbot.pl -c customer.lst -n notice.txt >>unmailed_customers.lst
-		# Set notified date on entry.
-		`echo 'UPDATE avincomplete SET Notified=1, NoticeDate="$DATE" WHERE Comments NOT NULL AND Notified=0;' | sqlite3 $DB_FILE`;
-		# How to get the an item page registration
-		# http://ilsdev1.epl.ca/AV_incomplete/search_create_item.php?item_id=31221099948528&branch=IDY
+		if ( -s $customerFile )
+		{
+			# Copy the file over to the production machine ready for the next run of mailerbot.
+			my $destDir = "/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/";
+			`scp $customerFile sirsi\@eplapp.library.ualberta.ca:$destDir`;
+			print STDERR "file $customerFile copied to application server\n";
+			# Set notified date on entry.
+			`echo 'UPDATE avincomplete SET Notified=1, NoticeDate="$DATE" WHERE Comments NOT NULL AND Notified=0;' | sqlite3 $DB_FILE`;
+			print STDERR "notification flag set in database.\n";
+		}
+		else
+		{
+			print STDERR "didn't find any new customers to contact. Did staff mark the missing parts on new items?\n";
+		}
+		# TODO: logic in app should reset the Notified flag to 0 if there is a change to the comments field.
 	}
 }
 
