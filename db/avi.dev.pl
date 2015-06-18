@@ -46,6 +46,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitems.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.7.01 - Fix discharge to use station library current default is EPLMNA.
 #          0.7.00 - Add -n to notify customers of missing components.
 #          0.6.04 - Fix to discharge items.
 #          0.6.03 - Discharge item from user charge item to discard.
@@ -83,7 +84,7 @@ my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
 my $DATE     = `date +%Y-%m-%d`;
 chomp( $DATE );
 
-my $VERSION  = qq{0.7.00};
+my $VERSION  = qq{0.7.01};
 
 # Trim function to remove whitespace from the start and end of the string.
 # param:  string to trim.
@@ -765,7 +766,11 @@ sub init
 			cancelHolds( $itemId );
 			# discharge the item.
 			print STDERR "discharging $itemId, removing the entry from the database.\n";
-			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U'`;
+			my $stationLibrary = `echo "select Location from avincomplete where ItemId=$itemId;" | sqlite3 $DB_FILE`;
+			chomp $stationLibrary;
+			$stationLibrary = 'EPL' . $stationLibrary;
+			# Add station library to discharge -s"EPLWHP"
+			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U' -s"$stationLibrary"`;
 			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE >>complete.log 2>&1`;
 			# remove from the av incomplete database.
 			`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
@@ -826,7 +831,11 @@ sub init
 			cancelHolds( $itemId );
 			# discharge the item, then recharge the item to a branch's discard card.
 			print STDERR "discharging $itemId.\n";
-			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U'`;
+			my $stationLibrary = `echo "select Location from avincomplete where ItemId=$itemId;" | sqlite3 $DB_FILE`;
+			chomp $stationLibrary;
+			$stationLibrary = 'EPL' . $stationLibrary;
+			# Add station library to discharge -s"EPLWHP"
+			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U' -s"$stationLibrary"`;
 			print STDERR "charging $itemId, to $branchDiscardCard.\n";
 			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | chargeitems.pl -b -u"$branchDiscardCard" -U'`;
 			# record what you are about to remove.
