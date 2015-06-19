@@ -43,7 +43,7 @@
 #
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Dependencies: seluser, selitem, selcatalog, selhold, selcharge, chargeitems.pl
-#               createholds.pl, cancelholds.pl, dischargeitems.pl.
+#               createholds.pl, cancelholds.pl, dischargeitem.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
 #          0.7.01 - Fix discharge to use station library current default is EPLMNA.
@@ -770,7 +770,7 @@ sub init
 			chomp $stationLibrary;
 			$stationLibrary = 'EPL' . $stationLibrary;
 			# Add station library to discharge -s"EPLWHP"
-			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U' -s"$stationLibrary"`;
+			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
 			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE >>complete.log 2>&1`;
 			# remove from the av incomplete database.
 			`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
@@ -835,7 +835,7 @@ sub init
 			chomp $stationLibrary;
 			$stationLibrary = 'EPL' . $stationLibrary;
 			# Add station library to discharge -s"EPLWHP"
-			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U' -s"$stationLibrary"`;
+			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
 			print STDERR "charging $itemId, to $branchDiscardCard.\n";
 			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | chargeitems.pl -b -u"$branchDiscardCard" -U'`;
 			# record what you are about to remove.
