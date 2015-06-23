@@ -242,7 +242,7 @@ EOF_SQL;
 #         around the library to match it up. The branch that finds the first piece of an AV incomplete
 #         is the owning library.
 # return: true if it worked and false otherwise.
-function create_new_item(&$db, $item, $branch)
+function create_new_item(&$db, $item, $branch, $comments)
 {
 	$title = "(title will be updated shortly)";
 	// sqlite> .schema
@@ -268,20 +268,22 @@ function create_new_item(&$db, $item, $branch)
 	# TransitDate DATE DEFAULT NULL,
 	# Comments CHAR(256)
 	$sql = <<<EOF_SQL
-INSERT OR IGNORE INTO avincomplete (ItemId, Title, CreateDate, Location) VALUES (:id, :title, strftime('%Y-%m-%d', DATETIME('now')), :branch);
+INSERT OR IGNORE INTO avincomplete (ItemId, Title, CreateDate, Location, Comments) VALUES (:id, :title, strftime('%Y-%m-%d', DATETIME('now')), :branch, :comments);
 EOF_SQL;
 	$stmt = $db->prepare($sql);
 	$stmt->bindValue(':id', $item, SQLITE3_INTEGER);
 	$stmt->bindValue(':title', $title, SQLITE3_TEXT);
 	$stmt->bindValue(':branch', $branch, SQLITE3_TEXT);
+	$stmt->bindValue(':comments', $comments, SQLITE3_TEXT);
 	$result = $stmt->execute();
 	$sql = <<<EOF_SQL
-UPDATE avincomplete SET Title=:title, CreateDate=strftime('%Y-%m-%d', DATETIME('now')), Location=:branch WHERE ItemId=:id;
+UPDATE avincomplete SET Title=:title, CreateDate=strftime('%Y-%m-%d', DATETIME('now')), Location=:branch, Comments=:comments WHERE ItemId=:id;
 EOF_SQL;
 	$stmt = $db->prepare($sql);
 	$stmt->bindValue(':id', $item, SQLITE3_INTEGER);
 	$stmt->bindValue(':title', $title, SQLITE3_TEXT);
 	$stmt->bindValue(':branch', $branch, SQLITE3_TEXT);
+	$stmt->bindValue(':comments', $comments, SQLITE3_TEXT);
 	$result = $stmt->execute();
 	$db->close();
 	return true;
@@ -358,21 +360,23 @@ if (! empty($_GET)) {
 		} elseif ($_GET['action'] === 'comments'){ # Comment on an item in database.
 			if (! empty($_GET['data'])){
 				$commentData = $_GET['data'];
-				if (! add_comments($db, $item, $branch, $commentData)){
-					$msg = "Function '" . $_GET['action'] . "' failed, comment too long.";
-					header("Location:error.php?msg=$msg");
-				}
+				add_comments($db, $item, $branch, $commentData);
+				$db->close(); # Manually close because create needs to use it twice.
 			} else {
 				$msg = "Function '" . $_GET['action'] . "' failed in functions.php expected comment data but got none.";
 				header("Location:error.php?msg=$msg");
 			}
 		} elseif ($_GET['action'] === 'create'){ # Create a new entry (or register) item in database.
-			if (create_new_item($db, $item, $branch)){
-				$msg = "Item <kbd>$item</kbd> registered as incomplete.";
-				header("Location:message.php?msg=$msg");
+			# Check if comments have been passed. The old version of the site doesn't 
+			# but the new can if staff use checkboxes in search_create_item.php.
+			$commentData = '';
+			if (! empty($_GET['data'])){
+				$commentData = html_entity_decode($_GET['data']);
+			}
+			if (create_new_item($db, $item, $branch, $commentData)){
+				echo "Item <kbd>$item</kbd> registered as incomplete.";
 			} else {
-				$msg = "Function '" . $_GET['action'] . "' failed in functions.php.";
-				header("Location:error.php?msg=$msg");
+				echo "Function '" . $_GET['action'] . "' failed in functions.php.";
 			}
 		} elseif ($_GET['action'] === 'contact'){ # Contacted customer flag set on item in database.
 			if (mark_customer_contacted($db, $item)){
