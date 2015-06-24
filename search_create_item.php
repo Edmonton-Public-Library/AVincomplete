@@ -27,9 +27,6 @@
 		<li><a href='branch_items.php?branch=ALL'><span class='glyphicon glyphicon-wrench'></span></a></li>
 		<li><a href='help.php'><span class='glyphicon glyphicon-info-sign'></span></a></li>
 	  </ul>
-	  <form class='navbar-form navbar-right'>
-		<input type='text' class='form-control' placeholder='Search...'>
-	  </form>
 	</div>
   </div>
 </nav>
@@ -85,17 +82,46 @@ $ret = $db->query($sql);
 $row = $ret->fetchArray(SQLITE3_ASSOC);
 if (! $row['count']){
 	echo "<p class='bg-danger'>Item: <kbd>$item</kbd> hasn't been reported as incomplete yet.</p>";
-	echo "<p><a href='functions.php?action=create&item_id=$item&branch=$branch'><button type='button' class='btn btn-primary btn-lg'>Report it now?</button></a>";
+	// Create a form that includes information that will submit the missing parts for the comments field.
+	echo "<p>Missing parts:</p>
+		<input id='case' type='checkbox' value='case' />case<br />
+		<input id='insert' type='checkbox' value='insert / booklet' />insert / booklet<br />
+		<input id='disc' type='checkbox' value='disc' />disc<br />
+		<input id='disc1' type='checkbox' value='disc 1' />disc 1<br />
+		<input id='disc2' type='checkbox' value='disc 2' />disc 2<br />
+		<input id='disc3' type='checkbox' value='disc 3' />disc 3<br />
+		<input id='disc4' type='checkbox' value='disc 4' />disc 4<br />
+		<input id='disc5' type='checkbox' value='disc 5' />disc 5<br />
+		<input id='several' type='checkbox' value='several discs' />several discs<br />
+		<input id='case_not_epls' type='checkbox' value='case does not belong to EPL' />case doesn't belong to EPL<br />
+		<input id='disc_not_epls' type='checkbox' value='disc does not belong to EPL' />disc doesn't belong to EPL<br />";
+	echo "<p>
+	<a id='do_it' href='#' my-action='create' item_id='$item' branch='$branch' 
+		class='av-button btn btn-default btn-primary btn-lg'
+		data-toggle='modal' data-target='.bs-example-modal-lg'>
+			Report it now?
+	</a>";
 } else {
 	echo "<p class='bg-success'>Item: <kbd>$item</kbd> found! ";
 	if ($row['Location']){
 		if ($row['Location'] === $branch){
 			echo "I think the item should be here at <kbd>$branch</kbd>, check the AV shelf.";
 			// echo "</p><p><a href='functions.php?action=complete&item_id=$item&branch=$branch'><button type='button' class='btn btn-primary btn-lg'>Mark complete?</button></a>";
-			echo "</p><p><a my-action='complete' href='#' item_id='$item' branch='$branch' class='av-button btn btn-default btn-primary btn-lg' data-toggle='modal' data-target='.bs-example-modal-lg'><span class='glyphicon glyphicon-ok'></span></a>";
+
+			echo "<p>
+					<a id='complete_it' href='#' my-action='complete' item_id='$item' branch='$branch' 
+						class='av-button btn btn-default btn-primary btn-lg'
+						data-toggle='modal' data-target='.bs-example-modal-lg'>
+							<span class='glyphicon glyphicon-ok'></span>
+					</a>";
 		} else {
 			echo "Transit to <kbd>".$row['Location']."</kbd>, and collect a star.<span class='glyphicon glyphicon-star'></span>";
-			echo "</p><p><a my-action='transit' href='#' item_id='$item' branch='$branch' class='av-button btn btn-default btn-primary btn-lg' data-toggle='modal' data-target='.bs-example-modal-lg'>Send to ".$row['Location']."?</a>";
+			echo "<p>
+					<a id='transit_it' href='#' my-action='transit' item_id='$item' branch='$branch' 
+						class='av-button btn btn-default btn-primary btn-lg'
+						data-toggle='modal' data-target='.bs-example-modal-lg'>
+							Send to " . $row['Location'] . "?
+					</a>";
 		}
 	} else {
 		echo "I have this item registered, but the branch isn't specified, <br/>so I can't tell you where to send it. Do you want to ask around?";
@@ -131,20 +157,82 @@ $db->close();
 </div>
 <!-- end of Modal dialog box -->
 <script>
+var missingParts = [];
+var missingPartsString = '';
 $(document).ready(function(){
-	// Handles all the actions related to displaying information in the modal dialogue box.
-	$("a.av-button").click(function(){
+	$("a#transit_it").click(function(){
         // $("#info-dialog").load("demo_test.txt");
 		itemId = $(this).attr('item_id');
 		branch = $(this).attr('branch');
 		myAction = $(this).attr('my-action');
-        $("#info-dialog").load(
-			"functions.php?action=" + myAction + "&item_id=" + itemId + "&branch=" + branch, 
+		// $("p#info-dialog").html('heres what I have ' + itemId + ', ' + branch + ', ' + myAction + '.');
+		myURL = myAction + "&item_id=" + itemId + "&branch=" + branch;
+		$("#info-dialog").load(
+			"functions.php?action=" + myURL, 
 			function(responseTxt, statusTxt, xhr){
 				if(statusTxt == "error")
 					$("#info-dialog").text("Error: " + xhr.status + ": " + xhr.statusText);
 		});
     });
+	$("a#complete_it").click(function(){
+        // $("#info-dialog").load("demo_test.txt");
+		itemId = $(this).attr('item_id');
+		branch = $(this).attr('branch');
+		myAction = $(this).attr('my-action');
+		// $("p#info-dialog").html('heres what I have ' + itemId + ', ' + branch + ', ' + myAction + '.');
+		myURL = myAction + "&item_id=" + itemId + "&branch=" + branch;
+		$("#info-dialog").load(
+			"functions.php?action=" + myURL, 
+			function(responseTxt, statusTxt, xhr){
+				if(statusTxt == "error")
+					$("#info-dialog").text("Error: " + xhr.status + ": " + xhr.statusText);
+		});
+    });
+	// Handles all the actions related to displaying information in the modal dialogue box.
+	$("a#do_it").click(function(){
+        // $("#info-dialog").load("demo_test.txt");
+		itemId = $(this).attr('item_id');
+		branch = $(this).attr('branch');
+		myAction = $(this).attr('my-action');
+		// $("p#info-dialog").html('heres what I have ' + itemId + ', ' + branch + ', ' + myAction + ', and ' + missingPartsString + '.');
+		// $("p#info-dialog").html('heres what I have.');
+		//confirm('The following pieces are missing: ' + missingPartsString + '. ');
+		myURL = '';
+		if (missingParts.length > 0) {
+			myURL = myAction + "&item_id=" + itemId + "&branch=" + branch + "&data=" + encodeURIComponent(missingPartsString);
+		} else {
+			myURL = myAction + "&item_id=" + itemId + "&branch=" + branch;
+		}
+		$("#info-dialog").load(
+			"functions.php?action=" + myURL, 
+			function(responseTxt, statusTxt, xhr){
+				if(statusTxt == "error")
+					$("#info-dialog").text("Error: " + xhr.status + ": " + xhr.statusText);
+		});
+    });
+	// Handles clicks from the
+	$('input').click(function (e) {
+		if ($(this).prop('checked')) {
+			missingParts.push(this.value);
+		} else {
+			index = missingParts.indexOf(this.value);
+			if (index > -1) {
+				missingParts.splice(index, 1);
+			}
+		}
+		// Format the string nicely.
+		missingPartsString = '';
+		for (var i = 0; i < missingParts.length -1; i++) {
+			missingPartsString += missingParts[i];
+			missingPartsString += ', '
+		}
+		if (missingParts.length > 1) {
+			missingPartsString += 'and ';
+			missingPartsString += missingParts[missingParts.length -1];
+		} else {
+			missingPartsString = missingParts[0];
+		}
+	});
 });
 </script>
 </body>
