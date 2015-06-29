@@ -1024,7 +1024,7 @@ END_SQL
 	if ( $opt{'n'} )
 	{
 		my $customerFile = "customers.lst";
-		`echo 'SELECT UserId, Title, Comments FROM avincomplete WHERE Comments NOT NULL AND Notified=0;' | sqlite3 $DB_FILE >$customerFile`;
+		`echo 'SELECT UserId, Title, Comments FROM avincomplete WHERE Comments NOT NULL AND Notified=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE >$customerFile`;
 		# produces: 
 		# 21221023803338|The foolish tortoise [sound recording] / written by Richard Buckley ; [illustrated by] Eric Carle|disc is missing
 		# 21221021920217|Yaiba. Ninja gaiden Z [game] / [developed by Comcept, Spark Unlimited]. --|disc is missing
@@ -1037,7 +1037,7 @@ END_SQL
 			`scp $customerFile sirsi\@eplapp.library.ualberta.ca:$destDir`;
 			print STDERR "file $customerFile copied to application server\n";
 			# Set notified date on entry.
-			`echo 'UPDATE avincomplete SET Notified=1, NoticeDate="$DATE" WHERE Comments NOT NULL AND Notified=0;' | sqlite3 $DB_FILE`;
+			`echo 'UPDATE avincomplete SET Notified=1, NoticeDate="$DATE" WHERE Comments NOT NULL AND Notified=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE`;
 			print STDERR "notification flag set in database.\n";
 		}
 		else

@@ -38,9 +38,9 @@ cd $HOME
 echo `date` >> $HOME/notification.log
 if [ -s /s/sirsi/Unicorn/Bincustom/mailerbot.pl ]
 then
-	if [ -s notice.txt ]
+	if [ -s $HOME/notice.txt ]
 	then 
-		if [ -s customers.lst ]
+		if [ -s $HOME/customers.lst ]
 		then 
 			echo "== notifying customers of missing components." 
 			echo "== notifying customers of missing components." >> $HOME/notification.log
