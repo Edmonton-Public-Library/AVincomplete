@@ -762,7 +762,7 @@ sub init
 				`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
 				next;
 			}
-			# cancel the hold if any.
+			# cancel the hold if any, before discharging, to ensure we don't trap our own hold.
 			cancelHolds( $itemId );
 			# discharge the item.
 			print STDERR "discharging $itemId, removing the entry from the database.\n";
