@@ -904,7 +904,7 @@ sub init
 			my $userKeyUserId = shift @data;
 			################################
 			# Uncomment the next line if you want to test just a single branch.
-			next if ( $userKeyUserId !~ m/WMC-AVINCOMPLETE/ ); ############ Testing only remove .
+			# next if ( $userKeyUserId !~ m/WMC-AVINCOMPLETE/ ); ############ Testing only remove .
 			################################
 			# Sometimes a human customer account gets set to AVSNAG accidentally so lets skip it if it is.
 			next if ( ! isValidSystemCard( $userKeyUserId ) );
@@ -913,7 +913,7 @@ sub init
 			# Now find all the charges for this card. The output looks like this: '31221104409748  |'
 			my $selectCardCharges = `echo "$userKeyUserId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selcharge -iU -oIS | selitem -iI -oB'`;
 			my @itemList = split '\n', $selectCardCharges;
-			while (@itemList)
+			while ( @itemList )
 			{
 				# For all the items that staff entered, let's find the current location.
 				my $itemId = shift @itemList;
