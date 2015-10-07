@@ -46,6 +46,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.8.00 - Remove items that have changed current location from CHECKEDOUT, esp. MISSING, LOST, LOST-ASSUM.
 #          0.7.01 - Fix discharge to use station library current default is EPLMNA.
 #          0.7.00 - Add -n to notify customers of missing components.
 #          0.6.04 - Fix to discharge items.
@@ -79,12 +80,57 @@ my $USER     = "";
 my $PASSWORD = "";
 my $DBH      = "";
 my $SQL      = "";
-
-my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
-my $DATE     = `date +%Y-%m-%d`;
+my $AVSNAG             = "AVSNAG"; # Profile of the av snag cards.
+my $DATE               = `date +%Y-%m-%d`;
 chomp( $DATE );
+my $TIME               = `date +%H%M%S`;
+chomp $TIME;
+my @NON_AVI_LOCATIONS  = ("STACKS", "MISSING", "LOST", "BINDERY", "DISCARD", "LOST-PAID", "RESHELVING", "LOST-ASSUM", "LOST-CLAIM", "STOLEN");
+my @CLEAN_UP_FILE_LIST = (); # List of file names that will be deleted at the end of the script if ! '-t'.
+my $BINCUSTOM          = "/usr/local/sbin";
+my $PIPE               = "$BINCUSTOM/pipe.pl";
+my $TEMP_DIR           = "/tmp";
+my $VERSION            = qq{0.7.01};
 
-my $VERSION  = qq{0.7.01};
+# Writes data to a temp file and returns the name of the file with path.
+# param:  unique name of temp file, like master_list, or 'hold_keys'.
+# param:  data to write to file.
+# return: name of the file that contains the list.
+sub create_tmp_file( $$ )
+{
+	my $name    = shift;
+	my $results = shift;
+	my $master_file = "$TEMP_DIR/$name.$TIME";
+	open FH, ">$master_file" or die "*** error opening '$master_file', $!\n";
+	my @list = split '\n', $results;
+	foreach my $line ( @list )
+	{
+		print FH "$line\n";
+	}
+	close FH;
+	# Add it to the list of files to clean if required at the end.
+	push @CLEAN_UP_FILE_LIST, $master_file;
+	return $master_file;
+}
+
+# Removes all the temp files created during running of the script.
+# param:  List of all the file names to clean up.
+# return: <none>
+sub clean_up
+{
+	foreach my $file ( @CLEAN_UP_FILE_LIST )
+	{
+		if ( -e $file )
+		{
+			printf STDERR "removing '%s'.\n", $file;
+			unlink $file;
+		}
+		else
+		{
+			printf STDERR "** Warning: file '%s' not found.\n", $file;
+		}
+	}
+}
 
 # Trim function to remove whitespace from the start and end of the string.
 # param:  string to trim.
@@ -130,6 +176,8 @@ RIV-DISCARD, for a discard card.
      then quickly charges them to the branches' discard card, then logs the entry and removes
      the entry from the avincomplete.db database.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
+ -l: Checks all items in the database to determine if the item has changed current location
+     and if the current location is not CHECKEDOUT, but LOST, LOST-ASSUM, STOLEN, and MISSING.
  -n: Send out notifications of incomplete materials. Customers with emails will be emailed
      from the production server.
  -t: Discharge items that are marked complete, removing the copy level hold on any of the
@@ -709,12 +757,43 @@ sub cancelHolds( $ )
 	}
 }
 
+# This function takes an item location as an argument, and returns 1 if the 
+# current location is one of the missing or lost locations and 0 otherwise.
+# param:  Item location 
+# return: 1 if current location is being billed to customer.
+sub isMovedFromAVILocation( $ )
+{
+	my $location = shift;
+	foreach my $normalLocation ( @NON_AVI_LOCATIONS )
+	{
+		return 1 if ( $location =~ m/($normalLocation)/ );
+	}
+	return 0;
+}
+
+# Removes an item from the AVI database only. Records event in remove.log.
+# param:  item id.
+# return: 1 if successful and 0 otherwise.
+sub removeItemFromAVI( $ )
+{
+	my $itemId = shift;
+	if ( $itemId )
+	{
+		# record what you are about to remove.
+		`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId;' | sqlite3 $DB_FILE >>removed.log 2>&1`;
+		# remove from the av incomplete database.
+		`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId;' | sqlite3 $DB_FILE`;
+		return 1;
+	}
+	return 0;
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
 sub init
 {
-    my $opt_string = 'acCdDfntuUx';
+    my $opt_string = 'acCdDflntuUx';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	# Audit all items in the database to ensure that if they are not checked out, that they get checked out to
@@ -1045,6 +1124,46 @@ END_SQL
 			print STDERR "didn't find any new customers to contact. Did staff mark the missing parts on new items?\n";
 		}
 		# TODO: logic in app should reset the Notified flag to 0 if there is a change to the comments field.
+	}
+	# Notify customers about the missing parts of materials they borrowed.
+	if ( $opt{'l'} )
+	{
+		print STDERR "Checking items current location has changed.\n";
+		my $results = `echo 'SELECT ItemId FROM avincomplete;' | sqlite3 $DB_FILE`;
+		my $itemIdFile = create_tmp_file( "avi_l_00", $results );
+		# 
+		$results = `cat "$itemIdFile" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oBm'`;
+		$itemIdFile = create_tmp_file( "avi_l_01", $results );
+		$results = `cat "$itemIdFile" | "$PIPE" -G'c1:CHECKEDOUT' -t'c0'`; # Checks for things not checked out.
+		$itemIdFile = create_tmp_file( "avi_l_02", $results );
+		# Produces:
+		# 31221053101791  |LOST-ASSUM|
+		# 31221066789640  |LOST-ASSUM|
+		# 31221068168959  |MUSIC|
+		# 31221073602570  |MUSIC|
+		# 31221074775409  |LOST-ASSUM|
+		# The list is just items that exist and items that locations that are not checkedout.
+		open DATA, "<$itemIdFile" or die "*** error, unable to open temp file '$itemIdFile', $!.\n";
+		while (<DATA>)
+		{
+			my ($itemId, $location) = split '\|', $_;
+			if ( isMovedFromAVILocation( $location ) )
+			{
+				printf STDERR "Removing item '%s' from AVI because staff moved item to a new lost or missing location.\n", $itemId;
+				cancelHolds( $itemId );
+				printf STDERR "removing '%s' from AVI DB (only)\n", $itemId;
+				removeItemFromAVI( $itemId );
+			}
+			else
+			{
+				printf STDERR "preserving '%s'\n", $itemId;
+			}
+		}
+		close DATA;
+		## Clean up the items that don't exist on the ILS any more.
+		# $results = `cat "$itemIdFile" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB' 2>&1`;
+		# $itemIdFile = create_tmp_file( "avi_l_03", $results );
+		clean_up();
 	}
 }
 
