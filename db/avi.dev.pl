@@ -183,6 +183,7 @@ RIV-DISCARD, for a discard card.
  -r<file>: Reload items from file. Must be pipe delimited and match format from output of 
      'select * from avincomplete;'. This format is stored in discard.log, complete.log and remove.log.
      If the id exists in the database, the entry will be ignored.
+ -R<file>: Removes the item ids listed in <file> (one per line) from the database.
  -t: Discharge items that are marked complete, removing the copy level hold on any of the
      branches' AVSNAG cards.
  -u: Updates database based on items entered by staff on the web site. Safe to do anytime.
@@ -865,6 +866,7 @@ sub isMovedFromAVILocation( $ )
 sub removeItemFromAVI( $ )
 {
 	my $itemId = shift;
+	chomp $itemId;
 	if ( $itemId )
 	{
 		# record what you are about to remove.
@@ -881,7 +883,7 @@ sub removeItemFromAVI( $ )
 # return: 
 sub init
 {
-    my $opt_string = 'acCdDflnr:tuUx';
+    my $opt_string = 'acCdDflnr:R:tuUx';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	# Audit all items in the database to ensure that if they are not checked out, that they get checked out to
@@ -1249,6 +1251,7 @@ END_SQL
 			}
 		}
 		close DATA;
+		exit 0;
 		# Remove the items from the database in one shot.
 		if ( $results )
 		{
@@ -1258,7 +1261,7 @@ END_SQL
 			{
 				my $itemId = $_;
 				chomp $itemId;
-				# removeItemFromAVI( $itemId );
+				removeItemFromAVI( $itemId );
 			}
 			close DATA;
 		}
@@ -1280,6 +1283,33 @@ END_SQL
 			insertRemovedItem( "$_" );
 		}
 		close DATA;
+		exit 0;
+	}
+	# Remove Item ids listed in a file.
+	if ( $opt{'R'} )
+	{
+		if ( ! -e $opt{'R'} )
+		{
+			print STDERR "*** error can't find file '%s'.\n", $opt{'R'};
+			usage();
+		}
+		my $itemFile = $opt{'R'};
+		# 31221098892578
+		open DATA, "<$itemFile" or die "*** error, unable to open input file '$itemFile', $!.\n";
+		while (<DATA>)
+		{
+			if ( m/\d{13,}/ )
+			{
+				printf STDERR "removing '%s'...\n", $_;
+				removeItemFromAVI( $_ );
+			}
+			else
+			{
+				printf STDERR "** warning, ignoring '%s', doesn't look like an item id.\n", $_;
+			}
+		}
+		close DATA;
+		exit 0;
 	}
 }
 
