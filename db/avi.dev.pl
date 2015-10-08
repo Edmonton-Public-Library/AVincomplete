@@ -1242,7 +1242,7 @@ END_SQL
 			{
 				chomp $location;
 				printf STDERR "Removing item '%s' from AVI because staff moved item to '%s'.\n", $itemId, $location;
-				# cancelHolds( $itemId );
+				cancelHolds( $itemId );
 				$results .= "$itemId\n";
 			}
 			else
@@ -1251,7 +1251,6 @@ END_SQL
 			}
 		}
 		close DATA;
-		exit 0;
 		# Remove the items from the database in one shot.
 		if ( $results )
 		{
