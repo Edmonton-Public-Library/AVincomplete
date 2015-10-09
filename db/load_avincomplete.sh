@@ -36,6 +36,9 @@ echo `date` >> $HOME/load.log
 if [ -s $HOME/avincomplete.pl ]
 then
 	cd $HOME
+	echo "== database $HOME/avincomplete.pl removing items whose home locations have changed to LOST." >> $HOME/load.log
+	$HOME/avincomplete.pl -l >>$HOME/load.log 2>&1
+	echo "done." >> $HOME/load.log
 	echo "== database $HOME/avincomplete.pl updating AVSNAG cards." >> $HOME/load.log
 	$HOME/avincomplete.pl -c >>$HOME/load.log 2>&1
 	echo "done." >> $HOME/load.log
