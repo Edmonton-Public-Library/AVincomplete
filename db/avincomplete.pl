@@ -46,6 +46,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.8.00 - Remove items that have changed current location from CHECKEDOUT, esp. MISSING, LOST, LOST-ASSUM.
 #          0.7.01 - Fix discharge to use station library current default is EPLMNA.
 #          0.7.00 - Add -n to notify customers of missing components.
 #          0.6.04 - Fix to discharge items.
@@ -79,12 +80,57 @@ my $USER     = "";
 my $PASSWORD = "";
 my $DBH      = "";
 my $SQL      = "";
-
-my $AVSNAG   = "AVSNAG"; # Profile of the av snag cards.
-my $DATE     = `date +%Y-%m-%d`;
+my $AVSNAG             = "AVSNAG"; # Profile of the av snag cards.
+my $DATE               = `date +%Y-%m-%d`;
 chomp( $DATE );
+my $TIME               = `date +%H%M%S`;
+chomp $TIME;
+my @NON_AVI_LOCATIONS  = ("STACKS", "DISCARD", "LOST-PAID", "RESHELVING", "STOLEN", "LOST");
+my @CLEAN_UP_FILE_LIST = (); # List of file names that will be deleted at the end of the script if ! '-t'.
+my $BINCUSTOM          = "/usr/local/sbin";
+my $PIPE               = "$BINCUSTOM/pipe.pl";
+my $TEMP_DIR           = "/tmp";
+my $VERSION            = qq{0.7.01};
 
-my $VERSION  = qq{0.7.01};
+# Writes data to a temp file and returns the name of the file with path.
+# param:  unique name of temp file, like master_list, or 'hold_keys'.
+# param:  data to write to file.
+# return: name of the file that contains the list.
+sub create_tmp_file( $$ )
+{
+	my $name    = shift;
+	my $results = shift;
+	my $master_file = "$TEMP_DIR/$name.$TIME";
+	open FH, ">$master_file" or die "*** error opening '$master_file', $!\n";
+	my @list = split '\n', $results;
+	foreach my $line ( @list )
+	{
+		print FH "$line\n";
+	}
+	close FH;
+	# Add it to the list of files to clean if required at the end.
+	push @CLEAN_UP_FILE_LIST, $master_file;
+	return $master_file;
+}
+
+# Removes all the temp files created during running of the script.
+# param:  List of all the file names to clean up.
+# return: <none>
+sub clean_up
+{
+	foreach my $file ( @CLEAN_UP_FILE_LIST )
+	{
+		if ( -e $file )
+		{
+			printf STDERR "removing '%s'.\n", $file;
+			unlink $file;
+		}
+		else
+		{
+			printf STDERR "** Warning: file '%s' not found.\n", $file;
+		}
+	}
+}
 
 # Trim function to remove whitespace from the start and end of the string.
 # param:  string to trim.
@@ -130,8 +176,14 @@ RIV-DISCARD, for a discard card.
      then quickly charges them to the branches' discard card, then logs the entry and removes
      the entry from the avincomplete.db database.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
+ -l: Checks all items in the database to determine if the item has changed current location
+     and if the current location is not CHECKEDOUT, but LOST, LOST-ASSUM, STOLEN.
  -n: Send out notifications of incomplete materials. Customers with emails will be emailed
      from the production server.
+ -r<file>: Reload items from file. Must be pipe delimited and match format from output of 
+     'select * from avincomplete;'. This format is stored in discard.log, complete.log and remove.log.
+     If the id exists in the database, the entry will be ignored.
+ -R<file>: Removes the item ids listed in <file> (one per line) from the database.
  -t: Discharge items that are marked complete, removing the copy level hold on any of the
      branches' AVSNAG cards.
  -u: Updates database based on items entered by staff on the web site. Safe to do anytime.
@@ -230,6 +282,91 @@ END_SQL
 			FetchHashKeyName => 'NAME_lc',
 		});
 		$DBH->do($SQL, undef, $itemId, $title, $userKey, $userId, $name, $phone, $email, 1, $DATE, $libCode);
+		$DBH->disconnect;
+	}
+	else
+	{
+		print STDERR "rejecting item '$itemId'\n";
+	}
+}
+
+# CREATE TABLE avincomplete (
+        # ItemId INTEGER PRIMARY KEY NOT NULL,
+        # Title CHAR(256),
+        # CreateDate DATE DEFAULT CURRENT_DATE,
+        # UserKey INTEGER,
+        # UserId INTEGER,
+        # UserPhone CHAR(20),
+        # UserName  CHAR(100),
+        # UserEmail CHAR(100),
+        # Processed INTEGER DEFAULT 0,
+        # ProcessDate DATE DEFAULT NULL,
+        # Contact INTEGER DEFAULT 0,
+        # ContactDate DATE DEFAULT NULL,
+        # Complete INTEGER DEFAULT 0,
+        # CompleteDate DATE DEFAULT NULL,
+        # Discard  INTEGER DEFAULT 0,
+        # DiscardDate DATE DEFAULT NULL,
+        # Location CHAR(6) NOT NULL,
+        # TransitLocation CHAR(6) DEFAULT NULL,
+        # TransitDate DATE DEFAULT NULL,
+        # Comments CHAR(256),
+        # Notified  INTEGER DEFAULT 0,
+        # NoticeDate DATE DEFAULT NULL
+# );
+# Creates new records in the AV incomplete database. Ignores if the 
+# primary key (item ID) is already present.
+# param:  Lines of data to store: 
+# '31221114041861|Frozen|2015-09-16|1117115|21221023276584|780-477-7073|Co,Lynxy|a.du@live.com|1|2015-09-16|0||0||0||JPL|||disc 2 missing|1|2015-09-16'
+# return: none.
+sub insertRemovedItem( $ )
+{
+	# Now start importing data.
+	my $line    = shift;
+        # Location CHAR(6) NOT NULL,
+        # TransitLocation CHAR(6) DEFAULT NULL,
+        # TransitDate DATE DEFAULT NULL,
+        # Comments CHAR(256),
+        # Notified  INTEGER DEFAULT 0,
+        # NoticeDate DATE DEFAULT NULL
+	my( $itemId, $title, $date_create, $userKey, $userId, $phone, $name, $email, $p, $p_date, $c, $c_date, $comp, $comp_date, $d, $d_date, $location, $transit_location, $transit_date, $comments, $n, $n_date ) = split( '\|', $line );
+	if ( defined $itemId )
+	{
+		# ItemId INTEGER PRIMARY KEY NOT NULL,
+        # Title CHAR(256),
+        # CreateDate DATE DEFAULT CURRENT_DATE,
+        # UserKey INTEGER,
+        # UserId INTEGER,
+        # UserPhone CHAR(20),
+        # UserName  CHAR(100),
+        # UserEmail CHAR(100),
+        # Processed INTEGER DEFAULT 0,
+        # ProcessDate DATE DEFAULT NULL,
+        # Contact INTEGER DEFAULT 0,
+        # ContactDate DATE DEFAULT NULL,
+        # Complete INTEGER DEFAULT 0,
+        # CompleteDate DATE DEFAULT NULL,
+        # Discard  INTEGER DEFAULT 0,
+        # DiscardDate DATE DEFAULT NULL,
+        # Location CHAR(6) NOT NULL,
+        # TransitLocation CHAR(6) DEFAULT NULL,
+        # TransitDate DATE DEFAULT NULL,
+        # Comments CHAR(256),
+        # Notified  INTEGER DEFAULT 0,
+        # NoticeDate DATE DEFAULT NULL
+		$SQL = <<"END_SQL";
+INSERT OR IGNORE INTO avincomplete 
+(ItemId, Title, CreateDate, UserKey, UserId, UserPhone, UserName, UserEmail, Processed, ProcessDate, Contact, ContactDate, Complete, CompleteDate, Discard, DiscardDate, Location, TransitLocation, TransitDate, Comments, Notified, NoticeDate) 
+VALUES 
+(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+END_SQL
+		$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
+			PrintError       => 0,
+			RaiseError       => 1,
+			AutoCommit       => 1,
+			FetchHashKeyName => 'NAME_lc',
+		});
+		$DBH->do($SQL, undef, $itemId, $title, $date_create, $userKey, $userId, $phone, $name, $email, $p, $p_date, $c, $c_date, $comp, $comp_date, $d, $d_date, $location, $transit_location, $transit_date, $comments, $n, $n_date);
 		$DBH->disconnect;
 	}
 	else
@@ -709,12 +846,44 @@ sub cancelHolds( $ )
 	}
 }
 
+# This function takes an item location as an argument, and returns 1 if the 
+# current location is one of the missing or lost locations and 0 otherwise.
+# param:  Item location 
+# return: 1 if current location is being billed to customer.
+sub isMovedFromAVILocation( $ )
+{
+	my $location = shift;
+	foreach my $normalLocation ( @NON_AVI_LOCATIONS )
+	{
+		return 1 if ( $location eq $normalLocation );
+	}
+	return 0;
+}
+
+# Removes an item from the AVI database only. Records event in remove.log.
+# param:  item id.
+# return: 1 if successful and 0 otherwise.
+sub removeItemFromAVI( $ )
+{
+	my $itemId = shift;
+	chomp $itemId;
+	if ( $itemId )
+	{
+		# record what you are about to remove.
+		`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId;' | sqlite3 $DB_FILE >>removed.log 2>&1`;
+		# remove from the av incomplete database.
+		`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId;' | sqlite3 $DB_FILE`;
+		return 1;
+	}
+	return 0;
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
 sub init
 {
-    my $opt_string = 'acCdDfntuUx';
+    my $opt_string = 'acCdDflnr:R:tuUx';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	# Audit all items in the database to ensure that if they are not checked out, that they get checked out to
@@ -1045,6 +1214,101 @@ END_SQL
 			print STDERR "didn't find any new customers to contact. Did staff mark the missing parts on new items?\n";
 		}
 		# TODO: logic in app should reset the Notified flag to 0 if there is a change to the comments field.
+	}
+	# Notify customers about the missing parts of materials they borrowed.
+	if ( $opt{'l'} )
+	{
+		print STDERR "Checking items current location has changed.\n";
+		## Process items in the AVI database, remove items that have been marked LOST-ASSUM, etc. See @NON_AVI_LOCATIONS.
+		my $results = `echo 'SELECT ItemId FROM avincomplete;' | sqlite3 $DB_FILE`;
+		my $itemIdFile = create_tmp_file( "avi_l_00", $results );
+		$results = `cat "$itemIdFile" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oBm'`;
+		$itemIdFile = create_tmp_file( "avi_l_01", $results );
+		$results = `cat "$itemIdFile" | "$PIPE" -G'c1:CHECKEDOUT' -t'c0'`; # Checks for things not checked out.
+		$itemIdFile = create_tmp_file( "avi_l_02", $results );
+		# Produces:
+		# 31221053101791  |LOST-ASSUM|
+		# 31221066789640  |LOST-ASSUM|
+		# 31221068168959  |MUSIC|
+		# 31221073602570  |MUSIC|
+		# 31221074775409  |LOST-ASSUM|
+		# The list is just items that exist and items that locations that are not checkedout.
+		open DATA, "<$itemIdFile" or die "*** error, unable to open temp file '$itemIdFile', $!.\n";
+		$results = ''; # Reset results.
+		while (<DATA>)
+		{
+			my ($itemId, $location) = split '\|', $_;
+			if ( isMovedFromAVILocation( $location ) )
+			{
+				chomp $location;
+				printf STDERR "Removing item '%s' from AVI because staff moved item to '%s'.\n", $itemId, $location;
+				cancelHolds( $itemId );
+				$results .= "$itemId\n";
+			}
+			else
+			{
+				printf STDERR "preserving '%s'\n", $itemId;
+			}
+		}
+		close DATA;
+		# Remove the items from the database in one shot.
+		if ( $results )
+		{
+			my $databaseItems = create_tmp_file( "avi_l_03", $results );
+			open DATA, "<$databaseItems" or die "*** error, unable to open temp file '$databaseItems', $!.\n";
+			while (<DATA>)
+			{
+				my $itemId = $_;
+				chomp $itemId;
+				removeItemFromAVI( $itemId );
+			}
+			close DATA;
+		}
+		clean_up();
+	}
+	# Reload records from log output.
+	if ( $opt{'r'} )
+	{
+		if ( ! -e $opt{'r'} )
+		{
+			print STDERR "*** error can't find file '%s'.\n", $opt{'r'};
+			usage();
+		}
+		my $itemFile = $opt{'r'};
+		# 31221098892578|The 12 biggest lies [videorecording] / [written and directed by Andre van Heerden]|2015-10-08|29133|21221024220094|780-474-4353|Wynnyk, Corey Edward||1|2015-10-08|0||0||0||ABB||||0|
+		open DATA, "<$itemFile" or die "*** error, unable to open input file '$itemFile', $!.\n";
+		while (<DATA>)
+		{
+			insertRemovedItem( "$_" );
+		}
+		close DATA;
+		exit 0;
+	}
+	# Remove Item ids listed in a file.
+	if ( $opt{'R'} )
+	{
+		if ( ! -e $opt{'R'} )
+		{
+			print STDERR "*** error can't find file '%s'.\n", $opt{'R'};
+			usage();
+		}
+		my $itemFile = $opt{'R'};
+		# 31221098892578
+		open DATA, "<$itemFile" or die "*** error, unable to open input file '$itemFile', $!.\n";
+		while (<DATA>)
+		{
+			if ( m/\d{13,}/ )
+			{
+				printf STDERR "removing '%s'...\n", $_;
+				removeItemFromAVI( $_ );
+			}
+			else
+			{
+				printf STDERR "** warning, ignoring '%s', doesn't look like an item id.\n", $_;
+			}
+		}
+		close DATA;
+		exit 0;
 	}
 }
 
