@@ -85,7 +85,6 @@ my $DATE               = `date +%Y-%m-%d`;
 chomp( $DATE );
 my $TIME               = `date +%H%M%S`;
 chomp $TIME;
-my @NON_AVI_LOCATIONS  = ("STACKS", "DISCARD", "LOST-PAID", "RESHELVING", "STOLEN", "LOST");
 my @CLEAN_UP_FILE_LIST = (); # List of file names that will be deleted at the end of the script if ! '-t'.
 my $BINCUSTOM          = "/usr/local/sbin";
 my $PIPE               = "$BINCUSTOM/pipe.pl";
@@ -666,10 +665,8 @@ sub isCheckedOut( $ )
 {
 	my $itemId = shift;
 	# my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -om'`;
-	my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oIm | selcharge -iI -oUS | seluser -iU -oSB'`;
-	# On success: 'CHECKEDOUT|21221022896929|' on fail: ''
-	# Here we check if we get at least 12 digits because system cards are letters and L-PASS and ME have different 
-	# numbers but all more than 12.
+	my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -om'`;
+	# On success: 'CHECKEDOUT|' on fail: ''
 	return 1 if ( $locationCheck =~ m/CHECKEDOUT/ );
 	return 0;
 }
@@ -844,20 +841,6 @@ sub cancelHolds( $ )
 		`echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | cancelholds.pl -B"$branchCard" -U'`;
 		print STDERR "Ok: any holds for item '$itemId' removed from '$branchCard'.\n";
 	}
-}
-
-# This function takes an item location as an argument, and returns 1 if the 
-# current location is one of the missing or lost locations and 0 otherwise.
-# param:  Item location 
-# return: 1 if current location is being billed to customer.
-sub isMovedFromAVILocation( $ )
-{
-	my $location = shift;
-	foreach my $normalLocation ( @NON_AVI_LOCATIONS )
-	{
-		return 1 if ( $location eq $normalLocation );
-	}
-	return 0;
 }
 
 # Removes an item from the AVI database only. Records event in remove.log.
@@ -1215,7 +1198,7 @@ END_SQL
 		}
 		# TODO: logic in app should reset the Notified flag to 0 if there is a change to the comments field.
 	}
-	# Notify customers about the missing parts of materials they borrowed.
+	# Remove items whose current location indicates that the item is no longer an AVI, and AVI may have been missed by staff.
 	if ( $opt{'l'} )
 	{
 		print STDERR "Checking items current location has changed.\n";
@@ -1224,25 +1207,18 @@ END_SQL
 		my $itemIdFile = create_tmp_file( "avi_l_00", $results );
 		$results = `cat "$itemIdFile" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oBm'`;
 		$itemIdFile = create_tmp_file( "avi_l_01", $results );
-		$results = `cat "$itemIdFile" | "$PIPE" -G'c1:CHECKEDOUT' -t'c0'`; # Checks for things not checked out.
+		$results = `cat "$itemIdFile" | "$PIPE" -t'c0'`;
 		$itemIdFile = create_tmp_file( "avi_l_02", $results );
-		# Produces:
-		# 31221053101791  |LOST-ASSUM|
-		# 31221066789640  |LOST-ASSUM|
-		# 31221068168959  |MUSIC|
-		# 31221073602570  |MUSIC|
-		# 31221074775409  |LOST-ASSUM|
 		# The list is just items that exist and items that locations that are not checkedout.
 		open DATA, "<$itemIdFile" or die "*** error, unable to open temp file '$itemIdFile', $!.\n";
 		$results = ''; # Reset results.
 		while (<DATA>)
 		{
 			my ($itemId, $location) = split '\|', $_;
-			if ( isMovedFromAVILocation( $location ) )
+			if ( $location !~ /CHECKEDOUT/ )
 			{
 				chomp $location;
-				printf STDERR "Removing item '%s' from AVI because staff moved item to '%s'.\n", $itemId, $location;
-				cancelHolds( $itemId );
+				printf STDERR "Removing item '%s' from AVI because current location is '%s'.\n", $itemId, $location;
 				$results .= "$itemId\n";
 			}
 			else
@@ -1260,6 +1236,7 @@ END_SQL
 			{
 				my $itemId = $_;
 				chomp $itemId;
+				cancelHolds( $itemId );
 				removeItemFromAVI( $itemId );
 			}
 			close DATA;
