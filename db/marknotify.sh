@@ -24,6 +24,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Tue Apr 14 12:20:04 MDT 2015
 # Rev:     
+#   0.2 - Added removal of items that are no longer charged. 
 #   0.1 - Scheduled -n mark customers for notification of missing material. 
 #
 ####################################################
@@ -32,6 +33,9 @@ echo `date` >> $HOME/load.log
 if [ -s $HOME/avincomplete.pl ]
 then
 	cd $HOME
+	echo "== database $HOME/avincomplete.pl removing items whose home locations have changed to LOST." >> $HOME/load.log
+	$HOME/avincomplete.pl -l >>$HOME/load.log 2>&1
+	echo "done." >> $HOME/load.log
 	echo "== database $HOME/avincomplete.pl -n making note of customers to notify." >> $HOME/load.log
 	$HOME/avincomplete.pl -n >>$HOME/load.log 2>&1
 	echo "done." >> $HOME/load.log

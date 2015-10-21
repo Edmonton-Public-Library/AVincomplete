@@ -24,6 +24,8 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Tue Apr 14 12:20:04 MDT 2015
 # Rev:    
+#   0.5 - Removing -l to run just once a day after closing. 
+#         Stops newly added items from being deleted prematurely.
 #   0.4 - Add '-D' for removing discarded items.
 #   0.3 - Removed running '-t' in favour of a faster schedule on complete items.
 #         See markcomplete.sh. 
@@ -36,9 +38,6 @@ echo `date` >> $HOME/load.log
 if [ -s $HOME/avincomplete.pl ]
 then
 	cd $HOME
-	echo "== database $HOME/avincomplete.pl removing items whose home locations have changed to LOST." >> $HOME/load.log
-	$HOME/avincomplete.pl -l >>$HOME/load.log 2>&1
-	echo "done." >> $HOME/load.log
 	echo "== database $HOME/avincomplete.pl updating AVSNAG cards." >> $HOME/load.log
 	$HOME/avincomplete.pl -c >>$HOME/load.log 2>&1
 	echo "done." >> $HOME/load.log
