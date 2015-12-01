@@ -46,6 +46,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.8.02 - Include ItemId and location in email to customer.
 #          0.8.01 - Remove LOST-ASSUM as a invalid current location. An item can be checked out and LOST-ASSUM. Not the case for LOST though.
 #          0.8.00 - Remove items that have changed current location from CHECKEDOUT, esp. MISSING, LOST, LOST-ASSUM.
 #          0.7.01 - Fix discharge to use station library current default is EPLMNA.
@@ -90,7 +91,7 @@ my @CLEAN_UP_FILE_LIST = (); # List of file names that will be deleted at the en
 my $BINCUSTOM          = "/usr/local/sbin";
 my $PIPE               = "$BINCUSTOM/pipe.pl";
 my $TEMP_DIR           = "/tmp";
-my $VERSION            = qq{0.8.01};
+my $VERSION            = qq{0.8.02};
 
 # Writes data to a temp file and returns the name of the file with path.
 # param:  unique name of temp file, like master_list, or 'hold_keys'.
@@ -1177,7 +1178,7 @@ END_SQL
 	if ( $opt{'n'} )
 	{
 		my $customerFile = "customers.lst";
-		`echo 'SELECT UserId, Title, Comments FROM avincomplete WHERE Comments NOT NULL AND Notified=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE >$customerFile`;
+		`echo 'SELECT UserId, Title, Comments, ItemId, Location FROM avincomplete WHERE Comments NOT NULL AND Notified=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE >$customerFile`;
 		# produces: 
 		# 21221023803338|The foolish tortoise [sound recording] / written by Richard Buckley ; [illustrated by] Eric Carle|disc is missing
 		# 21221021920217|Yaiba. Ninja gaiden Z [game] / [developed by Comcept, Spark Unlimited]. --|disc is missing
