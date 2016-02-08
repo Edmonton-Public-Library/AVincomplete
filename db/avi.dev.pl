@@ -11,10 +11,10 @@
 # email address? (This is so we have an idea of how many customers staff would
 # need to call under our proposed new method).
 # Method:
-# Assumptions: You already have a list of items checked out from EPL-AVSNAG cards.
+# Assumptions: You already have a list of items checked out from EPL_AVSNAG cards.
 # If you don't do: 
 # **********************************************************************************************
-#    seluser -p"EPL-AVSNAG" -oBp >snag.cards.ids.lst
+#    seluser -p"EPL_AVSNAG" -oBp >snag.cards.ids.lst
 #    cat snag.cards.ids.lst | grephist.pl -D"20120101,20121231" -c"CV" >all.snags.2012.lst
 #    cat all.snags.2012.lst | cut -d^ -f6 | cut -c3- >item.ids.lst
 # Now you have all the items.
@@ -46,6 +46,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.8.03 - Changed EPL- profiles to EPL_.
 #          0.8.02 - Include ItemId and location in email to customer.
 #          0.8.01 - Remove LOST-ASSUM as a invalid current location. An item can be checked out and LOST-ASSUM. Not the case for LOST though.
 #          0.8.00 - Remove items that have changed current location from CHECKEDOUT, esp. MISSING, LOST, LOST-ASSUM.
@@ -164,7 +165,7 @@ RIV-DISCARD, for a discard card.
      items in the database. It is safe to run since it doesn't update the local database
      and merely makes calls to the ILS to check and charge items. Another $0 
      process may safely run at the same time if you have scheduled it to do so.
- -c: Refreshes the avsnagcards table of EPL-AVSNAG cards. These are the cards used to checkout 
+ -c: Refreshes the avsnagcards table of EPL_AVSNAG cards. These are the cards used to checkout 
      materials and place holds. Can safely be run regularly. AV incomplete cards themselves
      don't change all that often, but if a new one is added this should be run. See '-d'
      for discard cards. This should be run before -U to ensure all cards are attributable
@@ -1050,7 +1051,7 @@ sub init
 	if ( $opt{'U'} )
 	{
 		# Find all the AV Snag cards in the system, then iterate over them to find all the items charged.
-		my $selectSnagCards = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL-AVSNAG" -oUB'`;
+		my $selectSnagCards = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL_AVSNAG" -oUB'`;
 		# Looks like: '604887|WMC-AVINCOMPLETE|'
 		my @data = split '\n', $selectSnagCards;
 		while (@data)
@@ -1092,7 +1093,7 @@ sub init
 	# Create table of system cards for holds and checkouts.
 	if ( $opt{'c'} ) 
 	{
-		my $apiResults = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL-AVSNAG" -oUB'`;
+		my $apiResults = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL_AVSNAG" -oUB'`;
 		# which produces:
 		# ...
 		# 836641|DLI-SNAGS|
