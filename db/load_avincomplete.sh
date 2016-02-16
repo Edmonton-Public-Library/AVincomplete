@@ -35,6 +35,13 @@
 ####################################################
 HOME=/home/ilsdev/projects/avincomplete/db
 echo `date` >> $HOME/load.log
+test=`ps x | grep avincomplete | wc -l`
+k=3
+if [ $(echo " $test > $k" | bc) -eq 1 ]
+then
+	echo "== process busy." >> $HOME/load.log
+	exit 2
+fi
 if [ -s $HOME/avincomplete.pl ]
 then
 	cd $HOME

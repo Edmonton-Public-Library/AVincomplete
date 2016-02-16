@@ -100,7 +100,12 @@ if (! $row['count']){
 		<input id='disc10' type='checkbox' value='disc 10 is missing' />disc 10 is missing<br />
 		<input id='several' type='checkbox' value='several discs are missing' />several discs are missing<br />
 		<input id='case_not_epls' type='checkbox' value='case does not belong to EPL' />case doesn't belong to EPL<br />
-		<input id='disc_not_epls' type='checkbox' value='disc does not belong to EPL' />disc doesn't belong to EPL<br />";
+		<input id='disc_not_epls' type='checkbox' value='disc does not belong to EPL' />disc doesn't belong to EPL<br />
+		<input id='book' type='checkbox' value='book is missing' />book is missing<br />
+		<input id='puppet' type='checkbox' value='puppet is missing' />puppet is missing<br />
+		<input id='map' type='checkbox' value='map is missing' />map is missing<br />
+		<input id='pattern' type='checkbox' value='pattern' />pattern is missing<br />
+		";
 	echo "<p>
 	<a id='do_it' href='#' my-action='create' item_id='$item' branch='$branch' 
 		class='av-button btn btn-default btn-primary btn-lg'
