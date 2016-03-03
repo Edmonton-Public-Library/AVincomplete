@@ -39,7 +39,7 @@ fi
 if [ -s $HOME/avincomplete.pl ]
 then
 	cd $HOME
-	echo "== database $HOME/avincomplete.pl discharging complete items." >> $HOME/load.log
+	echo "== database $HOME/avincomplete.pl -t discharging complete items." >> $HOME/load.log
 	$HOME/avincomplete.pl -t >>$HOME/load.log 2>&1
 	echo "done." >> $HOME/load.log
 	echo "====" >> $HOME/load.log
