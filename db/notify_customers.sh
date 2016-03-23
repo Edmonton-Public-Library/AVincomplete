@@ -24,6 +24,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Tue Apr 14 12:20:04 MDT 2015
 # Rev:     
+#   0.2 - Added handling for messaging customers that have complete items. 
 #   0.1 - Development. 
 #
 ####################################################
@@ -58,6 +59,34 @@ then
 		else
 			echo "no customers to notify." 
 			echo "no customers to notify." >> $HOME/notification.log
+			exit 0
+		fi
+	else
+		echo "** error, notice file is empty or doesn't exist."
+		echo "** error, notice file is empty or doesn't exist.">> $HOME/notification.log 
+		exit 2
+	fi
+	# Now do the completed accounts.
+	if [ -s $HOME/complete_notice.txt ]
+	then 
+		if [ -s $HOME/complete_customers.lst ]
+		then 
+			echo "== notifying customers of completed items." 
+			echo "== notifying customers of completed items." >> $HOME/notification.log
+			echo "reading customer complete file..."
+			echo "reading customer complete file..." >> $HOME/notification.log
+			/s/sirsi/Unicorn/Bincustom/mailerbot.pl -c"$HOME/complete_customers.lst" -n"$HOME/complete_notice.txt" >>$HOME/unmailed_customers.lst 2>>$HOME/err.log
+			echo "done."
+			echo "done." >> $HOME/notification.log
+			echo "Saving list of mailed customers." 
+			echo "Saving list of mailed customers." >> $HOME/notification.log
+			cat $HOME/complete_customers.lst >>$HOME/notification.log
+			rm $HOME/complete_customers.lst
+			echo "===="
+			echo "====" >> $HOME/notification.log
+		else
+			echo "no customers with complete items to notify." 
+			echo "no customers with complete items to notify." >> $HOME/notification.log
 			exit 0
 		fi
 	else

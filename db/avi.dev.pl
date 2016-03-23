@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-####################################################
+##################################################################################################
 #
 # Perl source file for project avincomplete 
 # Purpose: Help fill a request from Vicky to report the
@@ -46,6 +46,9 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.9.00 - Email 'item complete' if item is complete and still checked out to customer.
+#                   Clean out records that can't be found in the ILS. This can happen if staff entered
+#                   an ID incorrectly.
 #          0.8.03 - Changed EPL- profiles to EPL_.
 #          0.8.02 - Include ItemId and location in email to customer.
 #          0.8.01 - Remove LOST-ASSUM as a invalid current location. An item can be checked out and LOST-ASSUM. Not the case for LOST though.
@@ -69,7 +72,7 @@
 #
 # Dependencies: mailbot.pl
 #
-####################################################
+##################################################################################################
 
 use strict;
 use warnings;
@@ -77,22 +80,24 @@ use vars qw/ %opt /;
 use Getopt::Std;
 use DBI;
 
-my $DB_FILE  = "avincomplete.db";
-my $DSN      = "dbi:SQLite:dbname=$DB_FILE";
-my $USER     = "";
-my $PASSWORD = "";
-my $DBH      = "";
-my $SQL      = "";
-my $AVSNAG             = "AVSNAG"; # Profile of the av snag cards.
-my $DATE               = `date +%Y-%m-%d`;
+my $DB_FILE                = "avincomplete.db";
+my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
+my $USER                   = "";
+my $PASSWORD               = "";
+my $DBH                    = "";
+my $SQL                    = "";
+my $AVSNAG                 = "AVSNAG"; # Profile of the av snag cards.
+my $DATE                   = `date +%Y-%m-%d`;
 chomp( $DATE );
-my $TIME               = `date +%H%M%S`;
+my $TIME                   = `date +%H%M%S`;
 chomp $TIME;
-my @CLEAN_UP_FILE_LIST = (); # List of file names that will be deleted at the end of the script if ! '-t'.
-my $BINCUSTOM          = "/usr/local/sbin";
-my $PIPE               = "$BINCUSTOM/pipe.pl";
-my $TEMP_DIR           = "/tmp";
-my $VERSION            = qq{0.8.02};
+my @CLEAN_UP_FILE_LIST     = (); # List of file names that will be deleted at the end of the script if ! '-t'.
+my $BINCUSTOM              = "/usr/local/sbin";
+my $PIPE                   = "$BINCUSTOM/pipe.pl";
+my $TEMP_DIR               = "/tmp";
+my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
+my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
+my $VERSION                = qq{0.9.00};
 
 # Writes data to a temp file and returns the name of the file with path.
 # param:  unique name of temp file, like master_list, or 'hold_keys'.
@@ -181,14 +186,16 @@ RIV-DISCARD, for a discard card.
  -l: Checks all items in the database to determine if the item has changed current location
      and if the current location is not CHECKEDOUT, but LOST, LOST-ASSUM, STOLEN.
  -n: Send out notifications of incomplete materials. Customers with emails will be emailed
-     from the production server.
+     from the production server. This also triggers emails to customers whose items have been
+     marked complete.
  -r<file>: Reload items from file. Must be pipe delimited and match format from output of 
      'select * from avincomplete;'. This format is stored in discard.log, complete.log and remove.log.
      If the id exists in the database, the entry will be ignored.
  -R<file>: Removes the item ids listed in <file> (one per line) from the database.
  -t: Discharge items that are marked complete, removing the copy level hold on any of the
      branches' AVSNAG cards.
- -u: Updates database based on items entered by staff on the web site. Safe to do anytime.
+ -u: Removes incorrect item ids from the local database, that is items that couldn't be found in the ILS.
+     Updates database based on items entered by staff on the web site. Safe to do anytime. 
  -U: Updates database based on items on cards with $AVSNAG profile. Safe to run anytime,
      but should be run with a frequency that is inversely proportional to the amount of
      time staff are servicing AV incomplete.
@@ -864,6 +871,25 @@ sub removeItemFromAVI( $ )
 	return 0;
 }
 
+# Removes items from the database that were entered incorrectly and can't be found in the ILS.
+# param:  None.
+# return: number of successfully removed item ids if successful, and 0 otherwise.
+sub removeIncorrectIDs()
+{
+	my $results = `echo "select ItemId from avincomplete where Title like '$ITEM_NOT_FOUND';"  | sqlite3 $DB_FILE`;
+	my $rmItemIds = create_tmp_file( "aviincomplete_rm_invalid_items", $results );
+	my $count     = 0;
+	open RM_ITEM_IDS, "<$rmItemIds" or die "** error reading item id file - '$!'\n";
+	while ( <RM_ITEM_IDS> )
+	{
+		my $itemId = $_;
+		chomp $itemId;
+		$count += removeItemFromAVI( $itemId );
+	}
+	close RM_ITEM_IDS;
+	return $count;
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
@@ -900,6 +926,9 @@ sub init
 		}
 	}
 	# This looks for items that are marked complete and discharges them from the card they are checked out to.
+	# Note: this fucntion used to remove the users that were complete and write them to a log. We now want to
+	# notify customers that have the item still checked out, that their item was marked complete. See -n notify
+	# flag below.
 	if ( $opt{'t'} ) 
 	{
 		# Find all the items marked complete.
@@ -920,6 +949,15 @@ sub init
 			# cancel the hold if any, before discharging, to ensure we don't trap our own hold.
 			cancelHolds( $itemId );
 			# discharge the item.
+			# But let's see if it is charged to a customer first so later this evening we can notify them that the item
+			# has been found and the parts matched.
+			# Check if the item is checked out to a valid customer. Don't email system cards or if the customer doesn't have 
+			if ( isCheckedOutToCustomer( $itemId ) )
+			{
+				printf STDERR "Saving customer notification information for complete notification on item '%s'.\n", $itemId;
+				###### Handle notifying users that their items are complete.
+				`echo 'SELECT UserId, Title, ItemId, Location FROM avincomplete WHERE Comments NOT NULL AND UserId NOT NULL AND Complete=1;' | sqlite3 $DB_FILE >>$CUSTOMER_COMPLETE_FILE`;
+			}
 			print STDERR "discharging $itemId, removing the entry from the database.\n";
 			my $stationLibrary = `echo "select Location from avincomplete where ItemId=$itemId;" | sqlite3 $DB_FILE`;
 			chomp $stationLibrary;
@@ -927,7 +965,7 @@ sub init
 			# Add station library to discharge -s"EPLWHP"
 			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
 			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE >>complete.log 2>&1`;
-			# remove from the av incomplete database.
+			## remove from the av incomplete database.
 			`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
 		}
 		exit;
@@ -1005,9 +1043,13 @@ sub init
 	# Find the items in the db that are entered by staff.
 	if ( $opt{'u'} )
 	{
+		# Clean up any items that were not found on the ILS from previous runs -- but log them so staff know what happened.
+		printf STDERR "removing invalid entries and records with typos.\n";
+		removeIncorrectIDs();
+		# Now add the new ones.
 		my $apiResults = `echo 'SELECT ItemId FROM avincomplete WHERE Processed=0;' | sqlite3 $DB_FILE`;
 		my @data = split '\n', $apiResults;
-		while (@data)
+		while ( @data )
 		{
 			# For all the items that staff entered, let's find the current location.
 			my $itemId = shift @data;
@@ -1016,7 +1058,7 @@ sub init
 			{
 				print STDERR "$itemId not found in ILS.\n";
 				# post that the item is missing 
-				my $apiUpdate = $itemId . '|(Item not found in ILS, maybe discarded, or invalid item ID)|0|0|Unavailable|0|none|';
+				my $apiUpdate = $itemId . "|$ITEM_NOT_FOUND|0|0|Unavailable|0|none|";
 				updateNewItems( $apiUpdate );
 				# Nothing else we can do with this, let's get the next item ID.
 				next;
@@ -1045,6 +1087,7 @@ sub init
 			print STDERR "placing hold for $itemId.\n";
 			placeHoldForItem( $itemId );
 		}
+		clean_up();
 		exit;
 	} # End of '-u' switch handling.
 	# Update database from AVSNAG profile cards, inserts new records or ignores if it's already there.
@@ -1199,7 +1242,26 @@ END_SQL
 		{
 			print STDERR "didn't find any new customers to contact. Did staff mark the missing parts on new items?\n";
 		}
-		# TODO: logic in app should reset the Notified flag to 0 if there is a change to the comments field.
+		###### Handle notifying users that their items are complete.
+		# Note: this fucntion used to remove the users that were complete and write them to a log.
+		### The file $CUSTOMER_COMPLETE_FILE is created when -t (mark complete) runs. The file collects 
+		### is appended to through out the day and if the file exists it is scp'ed to the ILS for mailing 
+		### at night.
+		if ( -s $CUSTOMER_COMPLETE_FILE )
+		{
+			# Duplicated from above, but 
+			my $destDir = "/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/";
+			`scp $CUSTOMER_COMPLETE_FILE sirsi\@eplapp.library.ualberta.ca:$destDir`;
+			printf STDERR "file '%s' copied to application server for e-mailing.\n", $CUSTOMER_COMPLETE_FILE;
+			# Remove the list of complete customers.
+			printf STDERR "removing file '%s'.\n", $CUSTOMER_COMPLETE_FILE;
+			unlink $CUSTOMER_COMPLETE_FILE;
+		}
+		else
+		{
+			printf STDERR "didn't find any completed items checked out to customers.\n";
+		}
+		exit;
 	}
 	# Remove items whose current location indicates that the item is no longer an AVI, and AVI may have been missed by staff.
 	if ( $opt{'l'} )
@@ -1246,6 +1308,7 @@ END_SQL
 			close DATA;
 		}
 		clean_up();
+		exit;
 	}
 	# Reload records from log output.
 	if ( $opt{'r'} )
