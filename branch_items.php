@@ -290,7 +290,7 @@ $(document).ready(function(){
 // Added to refress the page and show the discard or complete button with correct colouring.
 setTimeout(function(){
    window.location.reload(1);
-}, 5000);
+}, 20000);
 </script>
 </body>
 </html>

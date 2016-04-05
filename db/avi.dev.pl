@@ -46,6 +46,8 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.9.01 - Fix -R to ignore content after the '|' or '\s+'.
+#          0.9.00_a - Add sleep time between dischargeitem and chargeitems to fix non charging to discard bug.
 #          0.9.00 - Email 'item complete' if item is complete and still checked out to customer.
 #                   Clean out records that can't be found in the ILS. This can happen if staff entered
 #                   an ID incorrectly.
@@ -97,7 +99,7 @@ my $PIPE                   = "$BINCUSTOM/pipe.pl";
 my $TEMP_DIR               = "/tmp";
 my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
 my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
-my $VERSION                = qq{0.9.00};
+my $VERSION                = qq{0.9.00_a};
 
 # Writes data to a temp file and returns the name of the file with path.
 # param:  unique name of temp file, like master_list, or 'hold_keys'.
@@ -1029,7 +1031,7 @@ sub init
 			$stationLibrary = 'EPL' . $stationLibrary;
 			# Add station library to discharge -s"EPLWHP"
 			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
-			print STDERR "charging $itemId, to $branchDiscardCard.\n";
+			print STDERR "charging $itemId, to $branchDiscardCard.\n waiting for dischargeitem.pl to complete.\n";
 			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | chargeitems.pl -b -u"$branchDiscardCard" -U'`;
 			# record what you are about to remove.
 			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE >>discard.log 2>&1`;
@@ -1338,20 +1340,31 @@ END_SQL
 		}
 		my $itemFile = $opt{'R'};
 		# 31221098892578
-		open DATA, "<$itemFile" or die "*** error, unable to open input file '$itemFile', $!.\n";
+		# or 
+		# 31221106193514|The|amazing|Spider-Man|2|[videorecording]|/|directed|by|Marc|Webb
+		# or
+		# 31221106184513  Any given Sunday [videorecording] / directed by Oliver Stone
+		# the pipe command will break the file on any space or '|', then output the first column which must be your item id
+		# then output only non-empty rows.
+		my $results = `cat "$itemFile" | pipe.pl -W'(\\s+|\\|)' -oc0 -zc0 -tc0`;
+		my $rmItemIds = create_tmp_file( "aviincomplete_rm_items", $results );
+		open DATA, "<$rmItemIds" or die "*** error, unable to open input file '$rmItemIds', $!.\n";
 		while (<DATA>)
 		{
-			if ( m/\d{13,}/ )
+			my $itemId = $_;
+			chomp $itemId;
+			if ( $itemId =~ m/^\d{13,}/ )
 			{
-				printf STDERR "removing '%s'...\n", $_;
-				removeItemFromAVI( $_ );
+				printf STDERR "removing '%s'...\n", $itemId;
+				removeItemFromAVI( $itemId );
 			}
 			else
 			{
-				printf STDERR "** warning, ignoring '%s', doesn't look like an item id.\n", $_;
+				printf STDERR "** warning, ignoring '%s', doesn't look like an item id.\n", $itemId;
 			}
 		}
 		close DATA;
+		clean_up();
 		exit 0;
 	}
 }
