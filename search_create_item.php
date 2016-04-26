@@ -58,7 +58,8 @@ if (empty($_GET['item_id'])){
 // This page shows an item if one exists on record, and if not allows you to create it in the database.
 # Get the count of items in the database.
 // $sql = "SELECT count(*) as count FROM avincomplete";// WHERE ItemId=" . $_GET['item_id'];
-$sql = "SELECT count(*) as count, Location FROM avincomplete WHERE ItemId=" . $_GET['item_id'];
+// $sql = "SELECT count(*) as count, Location FROM avincomplete WHERE ItemId=" . $_GET['item_id'];
+$sql = "SELECT count(*) as count, Location, Title FROM avincomplete WHERE ItemId=" . $_GET['item_id'];
 $branch = '';
 if (isset($_GET['branch'])){
 	$branch = $_GET['branch'];
@@ -113,12 +114,12 @@ if (! $row['count']){
 			Report it now?
 	</a>";
 } else {
-	echo "<p class='bg-success'>Item: <kbd>$item</kbd> found! ";
+	$title = $row['Title'];
+	echo "<p class='bg-success'>Item: <kbd>$item</kbd><br/> '$title' found!<br/>";
 	if ($row['Location']){
 		if ($row['Location'] === $branch){
+			// echo "I think the item should be here at <kbd>$branch</kbd>, check the AV shelf.";
 			echo "I think the item should be here at <kbd>$branch</kbd>, check the AV shelf.";
-			// echo "</p><p><a href='functions.php?action=complete&item_id=$item&branch=$branch'><button type='button' class='btn btn-primary btn-lg'>Mark complete?</button></a>";
-
 			echo "<p>
 					<a id='complete_it' href='#' my-action='complete' item_id='$item' branch='$branch' 
 						class='av-button btn btn-default btn-primary btn-lg'
