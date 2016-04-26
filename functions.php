@@ -61,12 +61,12 @@ function get_customer_info(&$db, $item)
 	# TransitDate DATE DEFAULT NULL,
 	# Comments CHAR(256)
 	// http://stackoverflow.com/questions/3319112/sqlite-read-only-database
-	$sql = "SELECT UserId, UserName, UserPhone, Title, UserEmail FROM avincomplete WHERE ItemId=$item;";
+	$sql = "SELECT UserId, UserName, UserPhone, Title, UserEmail, Comments FROM avincomplete WHERE ItemId=$item;";
 	$ret = $db->query($sql);
 	$output = '';
 	while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 		$output = 'User ID: '. $row['UserId'].'<br/>name: '.$row['UserName'].
-		'<br/>phone: '.$row['UserPhone'].'<br/>email: <a href="mailto:'.$row['UserEmail'].'?Subject=Item borrowed from EPL: '.$row['Title'].'." target="_top">'.$row['UserEmail'].'</a>';
+		'<br/>phone: '.$row['UserPhone'].'<br/>email: <a href="mailto:'.$row['UserEmail'].'?Subject=Item borrowed from EPL: '.$row['Title'].'." target="_top">'.$row['UserEmail'].'</a><br/>Title: '.$row['Comments'];
 	}
 	$db->close();
 	return $output;
