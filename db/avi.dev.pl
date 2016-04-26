@@ -46,6 +46,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.9.01_a - Added BINDERY as ignore location.
 #          0.9.01 - Fix -R to ignore content after the '|' or '\s+'.
 #          0.9.00_a - Add sleep time between dischargeitem and chargeitems to fix non charging to discard bug.
 #          0.9.00 - Email 'item complete' if item is complete and still checked out to customer.
@@ -99,7 +100,7 @@ my $PIPE                   = "$BINCUSTOM/pipe.pl";
 my $TEMP_DIR               = "/tmp";
 my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
 my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
-my $VERSION                = qq{0.9.00_a};
+my $VERSION                = qq{0.9.01_a};
 
 # Writes data to a temp file and returns the name of the file with path.
 # param:  unique name of temp file, like master_list, or 'hold_keys'.
@@ -1283,7 +1284,7 @@ END_SQL
 		{
 			my ($itemId, $location) = split '\|', $_;
 			# Sometimes an item can be LOST-ASSUM and CHECKEDOUT. If the item becomes LOST it gets a bill and is discharged.
-			if ( $location !~ /CHECKEDOUT/ and $location !~ /LOST-ASSUM/ )
+			if ( $location !~ /CHECKEDOUT/ and $location !~ /LOST-ASSUM/ and $location !~ /BINDERY/ )
 			{
 				chomp $location;
 				printf STDERR "Removing item '%s' from AVI because current location is '%s'.\n", $itemId, $location;
