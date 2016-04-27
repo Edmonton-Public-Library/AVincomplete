@@ -101,7 +101,7 @@ my $PIPE                   = "$BINCUSTOM/pipe.pl";
 my $TEMP_DIR               = "/tmp";
 my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
 my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
-my $VERSION                = qq{0.9.01_a};
+my $VERSION                = qq{0.10.00};
 
 # Writes data to a temp file and returns the name of the file with path.
 # param:  unique name of temp file, like master_list, or 'hold_keys'.
