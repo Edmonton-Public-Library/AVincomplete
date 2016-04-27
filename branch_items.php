@@ -4,13 +4,18 @@
   <title><?php if (! empty($_GET['branch'])){ echo $_GET['branch']; } ?> AV Incomplete</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
-  <link rel="stylesheet" href='css/style.css'>
-  <link rel="stylesheet" href='//cdn.datatables.net/1.10.5/css/jquery.dataTables.css'>
-  <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script> -->
-  <script src="js/jquery-2.1.1.min.js"></script>
-  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
-  <script src="//cdn.datatables.net/1.10.5/js/jquery.dataTables.min.js"></script>
+  <!-- <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css"> -->
+  <!-- <link rel="stylesheet" href='css/style.css'> -->
+  <!-- <link rel="stylesheet" href='//cdn.datatables.net/1.10.5/css/jquery.dataTables.css'> -->
+  <!--                      <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script> -->
+  <!-- <script src="js/jquery-2.1.1.min.js"></script> -->
+  <!-- <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script> -->
+  <!-- <script src="//cdn.datatables.net/1.10.5/js/jquery.dataTables.min.js"></script> -->
+  <!-- added for testing -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
 </head>
 <body>
 <nav class="navbar navbar-inverse navbar-fixed-top">
@@ -35,8 +40,10 @@
   </div>
 </nav>
 
-<div class="container-fluid">
-<table id="items-table" class="display" cellspacing="0" width="100%">
+<!-- <div class="container-fluid"> -->
+<div class="container">
+<table id="items-table" class="table table-condensed table-hover table-striped" cellspacing="0" width="100%">
+<!-- <table id="items-table" class="display" cellspacing="0" width="100%"> -->
 	<thead>
 		<tr>
 			<th>Item ID</th>

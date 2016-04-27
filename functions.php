@@ -66,7 +66,7 @@ function get_customer_info(&$db, $item)
 	$output = '';
 	while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 		$output = 'User ID: '. $row['UserId'].'<br/>name: '.$row['UserName'].
-		'<br/>phone: '.$row['UserPhone'].'<br/>email: <a href="mailto:'.$row['UserEmail'].'?Subject=Item borrowed from EPL: '.$row['Title'].'." target="_top">'.$row['UserEmail'].'</a><br/>Title: '.$row['Comments'];
+		'<br/>phone: '.$row['UserPhone'].'<br/>email: <a href="mailto:'.$row['UserEmail'].'?Subject=Item borrowed from EPL: '.$row['Title'].'." target="_top">'.$row['UserEmail'].'</a><br/>Incomplete: '.$row['Comments'];
 	}
 	$db->close();
 	return $output;
