@@ -1399,6 +1399,7 @@ END_SQL
 			`echo "$results" >> clean_avi_shelf_"$branch".csv`;
 			printf $results;
 			printf "== end report ==\n\n", $branch;
+			# TODO: remove these items from the avi database(?) suggest and see what staff and management want.
 		}
 		close BRANCH_NAME_FILE;
 		clean_up();
