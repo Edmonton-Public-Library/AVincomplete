@@ -46,6 +46,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.10.00 - Added clean avincomplete shelf list reports.
 #          0.9.01_a - Added BINDERY as ignore location.
 #          0.9.01 - Fix -R to ignore content after the '|' or '\s+'.
 #          0.9.00_a - Add sleep time between dischargeitem and chargeitems to fix non charging to discard bug.
@@ -160,7 +161,7 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-acCdftuUx] [-D<foo.bar>]
+	usage: $0 [-acCdftuUx] [-D<foo.bar>] [-e<days>]
 Creates and manages av incomplete sqlite3 database.
 Note: -c and -d flags rebuild the avsnag cards and discard cards for a branch based on 
 profiles. The branch id must appear as the first 3 letters of its name like: SPW-AVSNAG, or
@@ -185,6 +186,8 @@ RIV-DISCARD, for a discard card.
      branch AVSNAG card, discharges them from the card they are currently charged to, 
      then quickly charges them to the branches' discard card, then logs the entry and removes
      the entry from the avincomplete.db database.
+ -e<days>: Create clean av incomplete shelf lists for branches. To clean items 60 days or older
+     use '-e60'.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
  -l: Checks all items in the database to determine if the item has changed current location
      and if the current location is not CHECKEDOUT, but LOST, LOST-ASSUM, STOLEN.
@@ -898,7 +901,7 @@ sub removeIncorrectIDs()
 # return: 
 sub init
 {
-    my $opt_string = 'acCdDflnr:R:tuUx';
+    my $opt_string = 'acCdDe:flnr:R:tuUx';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	# Audit all items in the database to ensure that if they are not checked out, that they get checked out to
@@ -1367,6 +1370,38 @@ END_SQL
 		close DATA;
 		clean_up();
 		exit 0;
+	}
+	
+	# Produce clean av incomplete shelf list.
+	if ( $opt{'e'} )
+	{
+		my $daysAgo = $opt{'e'};
+		my $dateAgo = '';
+		# Get a list of branches.
+		my $results = `echo 'SELECT Branch FROM avsnagcards;' | sqlite3 $DB_FILE`;
+		my $branchSnagCards = create_tmp_file( "avi_e_snagcards", $results );
+		$results = `cat "$branchSnagCards" | "$PIPE" -dc0`;
+		my $branches = create_tmp_file( "avi_e_uniqsnagcards", $results );
+		# Now we need to work on dates; select all records older than 'n' days ago.
+		$dateAgo = `ssh sirsi\@eplapp.library.ualberta.ca 'transdate -d-$daysAgo'`;
+		$dateAgo = `echo "$dateAgo" | "$PIPE" -m'c0:####-##-##'`;
+		chomp $dateAgo;
+		# Now output the list of items based on branch.
+		open BRANCH_NAME_FILE, "<$branches" or die "No branch names found from the list of avsnagcard table.\n";
+		while ( <BRANCH_NAME_FILE> )
+		{
+			my $branch = $_;
+			chomp $branch;
+			$results = `echo 'SELECT Title, ItemId, CreateDate FROM avincomplete where Location="$branch" and CreateDate < "$dateAgo";' | sqlite3 $DB_FILE`;
+			printf "== Clean AV incomplete shelf list for '%s' ==\n", $branch;
+			$results = `echo "$results" | "$PIPE" -p'c0:-60 ' | "$PIPE" -h',' -z'c0' -m'c0:\\"##########################################################\\"' `;
+			`echo "Title,Item Id,Date Created" > clean_avi_shelf_"$branch".csv`;
+			`echo "$results" >> clean_avi_shelf_"$branch".csv`;
+			printf $results;
+			printf "== end report ==\n\n", $branch;
+		}
+		close BRANCH_NAME_FILE;
+		clean_up();
 	}
 }
 
