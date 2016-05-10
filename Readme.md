@@ -1,24 +1,27 @@
-=== Tue Apr 16 13:38:57 MDT 2013 ===
+
+
+Instructions for Running
+------------------------
+```
+avincomplete.pl -x
+```
 
 Project Notes
 -------------
 
-Instructions for Running:
-./avincomplete
-
 Product Description:
-Perl script written by Andrew Nisbet for Edmonton Public Library, distributable by the enclosed license.
+Perl script and PHP web site written by Andrew Nisbet for Edmonton Public Library, and is distributable by the enclosed license.
 
-Repository Information:
+
+
+Repository Information
+----------------------
 This product is under version control using Git.
 
-Dependencies:
-None
+Dependencies
+------------
+[av incomplete](https://github.com/anisbet/AVincomplete)
 
-Known Issues:
-None
-
-This is new now.
-
-http://ilsdev1.epl.ca/AV_incomplete/functions.php?action=complete&item_id=31221081062676&branch=WMC
-doesn't display the marked complete correctly.
+Known Issues
+------------
+CSS fixes due.
