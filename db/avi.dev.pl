@@ -46,6 +46,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.11.00 - Discard to one specific card. No need for branch discard cards.
 #          0.10.00 - Added clean avincomplete shelf list reports.
 #          0.9.01_a - Added BINDERY as ignore location.
 #          0.9.01 - Fix -R to ignore content after the '|' or '\s+'.
@@ -101,7 +102,8 @@ my $PIPE                   = "$BINCUSTOM/pipe.pl";
 my $TEMP_DIR               = "/tmp";
 my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
 my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
-my $VERSION                = qq{0.10.00};
+my $DISCARD_CARD_ID        = "ILS-DISCARD";
+my $VERSION                = qq{0.11.00};
 
 # Writes data to a temp file and returns the name of the file with path.
 # param:  unique name of temp file, like master_list, or 'hold_keys'.
@@ -184,7 +186,7 @@ RIV-DISCARD, for a discard card.
      if a new branch discard card is added. See '-c' for avsnag cards.
  -D: Process items marked as discard. Tests items are in ILS and if so cancels any hold for the
      branch AVSNAG card, discharges them from the card they are currently charged to, 
-     then quickly charges them to the branches' discard card, then logs the entry and removes
+     then quickly charges them to a discard card (default ILS-DISCARD), then logs the entry and removes
      the entry from the avincomplete.db database.
  -e<days>: Create clean av incomplete shelf lists for branches. To clean items 60 days or older
      use '-e60'.
@@ -660,7 +662,7 @@ END_SQL
 # This function takes a item ID as an argument, and returns 1 if the current location is CHECKEDOUT and the 
 # account is a legit customer, that is, not a system card, and 0 otherwise.
 # param:  Item ID 
-# return: 1 if checked out to customer and 0 otherwise.
+# return: 1 if checked out location and to customer and 0 otherwise.
 sub isCheckedOutToCustomer( $ )
 {
 	my $itemId = shift;
@@ -670,6 +672,21 @@ sub isCheckedOutToCustomer( $ )
 	# Here we check if we get at least 12 digits because system cards are letters and L-PASS and ME have different 
 	# numbers but all more than 12.
 	return 1 if ( $locationCheck =~ m/CHECKEDOUT/ and $locationCheck =~ m/\d{12}/ );
+	return 0;
+}
+
+# This function takes a item ID as an argument, and returns 1 if the current location is CHECKEDOUT and the 
+# account is a system card, and 0 otherwise.
+# param:  Item ID 
+# return: 1 if checkedout location AND to system card, and 0 otherwise.
+sub isCheckedOutToSystemCard( $ )
+{
+	my $itemId = shift;
+	my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oIm | selcharge -iI -oUS | seluser -iU -oSB'`;
+	# On success: 'CHECKEDOUT|WOO-AVINCOMPLETE|' on fail: ''
+	# Here we check we don't have 12 digits because system cards are letters and L-PASS and ME have different 
+	# numbers but all customer cards have 12 or more digits.
+	return 1 if ( $locationCheck =~ m/CHECKEDOUT/ and $locationCheck !~ m/\d{12}/ );
 	return 0;
 }
 
@@ -1008,8 +1025,10 @@ sub init
 	# Process items marked for discard.
 	if ( $opt{'D'} ) 
 	{
-		# Here we take the items that are marked discarded and discharge them, then charge them to the branch's discard card.
-		# Find all the items marked complete.
+		# Here we take the items that are marked discarded if so and the item is on a system card,
+		# it is ok to discharge it and charge it to a discard card. However, it is not ok to discharge 
+		# from a customer card, because the ILS will remove any LOST bill and replace it with overdues.
+		# Find all the items marked discard.
 		my $selectDiscardItems = `echo 'SELECT ItemId FROM avincomplete WHERE Discard=1;' | sqlite3 $DB_FILE`;
 		my @data = split '\n', $selectDiscardItems;
 		while (@data)
@@ -1024,20 +1043,26 @@ sub init
 				`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE`;
 				next;
 			}
-			my $branchDiscardCard = `echo "select UserId from avdiscardcards where Branch = (select Location from avincomplete where ItemId=$itemId) LIMIT 1;" | sqlite3 $DB_FILE`;
-			chomp( $branchDiscardCard );
+			# my $branchDiscardCard = `echo "select UserId from avdiscardcards where Branch = (select Location from avincomplete where ItemId=$itemId) LIMIT 1;" | sqlite3 $DB_FILE`;
+			# chomp( $branchDiscardCard );
+			my $branchDiscardCard = $DISCARD_CARD_ID;
 			# Cancel any holds for the branches' avsnag cards
 			cancelHolds( $itemId );
-			# discharge the item, then recharge the item to a branch's discard card.
-			print STDERR "discharging $itemId.\n";
-			my $stationLibrary = `echo "select Location from avincomplete where ItemId=$itemId;" | sqlite3 $DB_FILE`;
-			chomp $stationLibrary;
-			$stationLibrary = 'EPL' . $stationLibrary;
-			# Add station library to discharge -s"EPLWHP"
-			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
-			print STDERR "charging $itemId, to $branchDiscardCard.\n waiting for dischargeitem.pl to complete.\n";
-			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | chargeitems.pl -b -u"$branchDiscardCard" -U'`;
-			# record what you are about to remove.
+			# if the item is charged to a customer don't discard because they will end up with just an overdues
+			# rather than the cost of the item if it is lost or lost-claim.
+			if ( isCheckedOutToSystemCard( $itemId ) )
+			{
+				# discharge the item, then recharge the item to a branch's discard card.
+				print STDERR "discharging $itemId.\n";
+				my $stationLibrary = `echo "select Location from avincomplete where ItemId=$itemId;" | sqlite3 $DB_FILE`;
+				chomp $stationLibrary;
+				$stationLibrary = 'EPL' . $stationLibrary;
+				# Add station library to discharge -s"EPLWHP"
+				`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
+				print STDERR "charging $itemId, to $branchDiscardCard.\n waiting for dischargeitem.pl to complete.\n";
+				`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | chargeitems.pl -b -u"$branchDiscardCard" -U'`;
+			}
+			# and no matter what, record what you are about to remove from AVI.
 			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE >>discard.log 2>&1`;
 			# remove from the av incomplete database.
 			`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE`;
