@@ -24,6 +24,7 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Tue Apr 14 12:20:04 MDT 2015
 # Rev:    
+#   0.6 - Removing -d because we don't need to charge to branch discard cards, just a default single system card. 
 #   0.5 - Removing -l to run just once a day after closing. 
 #         Stops newly added items from being deleted prematurely.
 #   0.4 - Add '-D' for removing discarded items.
@@ -47,9 +48,6 @@ then
 	cd $HOME
 	echo "== database $HOME/avincomplete.pl updating AVSNAG cards." >> $HOME/load.log
 	$HOME/avincomplete.pl -c >>$HOME/load.log 2>&1
-	echo "done." >> $HOME/load.log
-	echo "== database $HOME/avincomplete.pl updating discard cards." >> $HOME/load.log
-	$HOME/avincomplete.pl -d >>$HOME/load.log 2>&1
 	echo "done." >> $HOME/load.log
 	echo "== database $HOME/avincomplete.pl updating items entered by staff." >> $HOME/load.log
 	$HOME/avincomplete.pl -u >>$HOME/load.log 2>&1
