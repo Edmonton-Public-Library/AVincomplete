@@ -863,7 +863,7 @@ sub removeIncorrectIDs()
 # return: 
 sub init
 {
-    my $opt_string = 'acCdDe:flnr:R:tuUx';
+    my $opt_string = 'acCd:De:flnr:R:tuUx';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	# Audit all items in the database to ensure that if they are not checked out, that they get checked out to
