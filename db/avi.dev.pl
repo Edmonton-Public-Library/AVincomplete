@@ -46,6 +46,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.12.00 - Remove DISCARD handling logic, not required, just use a single card.
 #          0.11.00 - Discard to one specific card. No need for branch discard cards.
 #          0.10.00 - Added clean avincomplete shelf list reports.
 #          0.9.01_a - Added BINDERY as ignore location.
@@ -103,7 +104,7 @@ my $TEMP_DIR               = "/tmp";
 my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
 my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
 my $DISCARD_CARD_ID        = "ILS-DISCARD";
-my $VERSION                = qq{0.11.00};
+my $VERSION                = qq{0.12.00};
 
 # Writes data to a temp file and returns the name of the file with path.
 # param:  unique name of temp file, like master_list, or 'hold_keys'.
@@ -182,8 +183,7 @@ RIV-DISCARD, for a discard card.
      for discard cards. This should be run before -U to ensure all cards are attributable
      to a given branch before we start trying to insert items and place holds on those items.
  -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
- -d: Refreshes the avdiscardcards table of DISCARD cards. Can safely be run regularly especially
-     if a new branch discard card is added. See '-c' for avsnag cards.
+ -d<card_id>: Sets the discard card to the supplied ID. Default is $DISCARD_CARD_ID.
  -D: Process items marked as discard. Tests items are in ILS and if so cancels any hold for the
      branch AVSNAG card, discharges them from the card they are currently charged to, 
      then quickly charges them to a discard card (default ILS-DISCARD), then logs the entry and removes
@@ -246,11 +246,6 @@ EOF
         # NoticeDate DATE DEFAULT NULL
 # );
 # CREATE TABLE avsnagcards (
-        # UserKey INTEGER PRIMARY KEY NOT NULL,
-        # UserId CHAR(20) NOT NULL,
-        # Branch CHAR(6) NOT NULL
-# );
-# CREATE TABLE avdiscardcards (
         # UserKey INTEGER PRIMARY KEY NOT NULL,
         # UserId CHAR(20) NOT NULL,
         # Branch CHAR(6) NOT NULL
@@ -465,32 +460,6 @@ END_SQL
 	$DBH->disconnect;
 }
 
-# Inserts av discard cards into the avincomplete.db database avdiscardcards table.
-# param:  user key integer.
-# param:  user id string.
-# param:  branch string.
-# return: none.
-sub insertAvDiscardCard( $$$ )
-{
-	my $userKey = shift;
-	my $userId  = shift;
-	my $branch  = shift;
-$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
-	PrintError       => 0,
-	RaiseError       => 1,
-	AutoCommit       => 1,
-	FetchHashKeyName => 'NAME_lc',
-});
-	$SQL = <<"END_SQL";
-INSERT OR IGNORE INTO avdiscardcards 
-(UserKey, UserId, Branch) 
-VALUES 
-(?, ?, ?)
-END_SQL
-	$DBH->do($SQL, undef, $userKey, $userId, $branch);
-	$DBH->disconnect;
-}
-
 # Creates the AV incomplete table.
 # param:  none.
 # return: none.
@@ -547,30 +516,6 @@ sub createAvSnagCardsTable()
 	# AV snag cards ids are never digits, more like MNA-AVSNAG
 	$SQL = <<"END_SQL";
 CREATE TABLE avsnagcards (
-	UserKey INTEGER PRIMARY KEY NOT NULL,
-	UserId CHAR(20) NOT NULL,
-	Branch CHAR(6) NOT NULL
-);
-END_SQL
-	$DBH->do($SQL);
-	$DBH->disconnect;
-}
-
-# Creates the AV incomplete discard cards table. This is where the branch's 
-# discard cards are going to be stored.
-# param:  none.
-# return: none.
-sub createAvDiscardCardsTable()
-{
-	$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
-	   PrintError       => 0,
-	   RaiseError       => 1,
-	   AutoCommit       => 1,
-	   FetchHashKeyName => 'NAME_lc',
-	});
-	# AV snag cards ids are never digits, more like MNA-AVSNAG
-	$SQL = <<"END_SQL";
-CREATE TABLE avdiscardcards (
 	UserKey INTEGER PRIMARY KEY NOT NULL,
 	UserId CHAR(20) NOT NULL,
 	Branch CHAR(6) NOT NULL
@@ -1005,8 +950,6 @@ sub init
 				createAvIncompleteTable();
 				`echo "DROP TABLE avsnagcards;" | sqlite3 $DB_FILE`;
 				createAvSnagCardsTable();
-				`echo "DROP TABLE avdiscardcards;" | sqlite3 $DB_FILE`;
-				createAvDiscardCardsTable();
 			}
 			else
 			{
@@ -1043,8 +986,6 @@ sub init
 				`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE`;
 				next;
 			}
-			# my $branchDiscardCard = `echo "select UserId from avdiscardcards where Branch = (select Location from avincomplete where ItemId=$itemId) LIMIT 1;" | sqlite3 $DB_FILE`;
-			# chomp( $branchDiscardCard );
 			my $branchDiscardCard = $DISCARD_CARD_ID;
 			# Cancel any holds for the branches' avsnag cards
 			cancelHolds( $itemId );
@@ -1206,49 +1147,12 @@ END_SQL
 		}
 		$DBH->disconnect();
 	} # end of if '-c' processing.
-	# Create table of system cards for discards.
+	# Set the default discard system card.
 	if ( $opt{'d'} ) 
 	{
-		my $apiResults = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"DISCARD" -oUB'`;
-		# which produces:
-		# ...
-		# 1123293|CLV-DISCARD-NOV|
-		# 1123294|CLV-DISCARD-DEC|
-		# 1126170|WMC-DISCARD-DEC2|
-		# 1133749|21221023754002|
-		# ...
-		$DBH = DBI->connect($DSN, $USER, $PASSWORD, {
-			PrintError       => 0,
-			RaiseError       => 1,
-			AutoCommit       => 1,
-			FetchHashKeyName => 'NAME_lc',
-		});
-		my @data = split '\n', $apiResults;
-		while (@data)
-		{
-			my $line = shift @data;
-			my ( $userKey, $userId ) = split( '\|', $line );
-			# get rid of the extra white space on the line
-			$userId = trim( $userId );
-			# if this user id doesn't match your library's library card format (in our case codabar)
-			# ignore it. It is probably a system card.
-			next if ( $userId =~ m/\d{4,}/ );
-			# This is brittle, but it seems that most cards are named by branch as the first 3 characters.
-			# If that holds lets get them now.
-			my $branch = substr( $userId, 0, 3 );
-			$SQL = <<"END_SQL";
-INSERT OR IGNORE INTO avdiscardcards (UserKey, UserId, Branch) VALUES (?, ?, ?)
-END_SQL
-			$DBH->do( $SQL, undef, $userKey, $userId, $branch );
-			# Now try an update user keys that are already in there but out of date (Name changed).
-			$SQL = <<"END_SQL";
-UPDATE avdiscardcards SET UserId=?, Branch=? 
-WHERE UserKey=?
-END_SQL
-			$DBH->do($SQL, undef, $userKey, $userId, $branch );
-		}
-		$DBH->disconnect();
-	} # end of -d processing (discard cards for a branch.
+		# It is no longer required to add discard cards to the the database, just use the default card.
+		$DISCARD_CARD_ID = $opt{'d'};
+	}
 	# Notify customers about the missing parts of materials they borrowed.
 	if ( $opt{'n'} )
 	{
