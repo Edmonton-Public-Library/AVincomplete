@@ -106,7 +106,7 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	// if (strlen($row['Comments']) > 0){
 		// echo "		<td>
 			// <a my-action='comments' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
-				// class='comment btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#commentsModal'>
+				// class='comment btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#commentsModal'>
 				// <span class='glyphicon glyphicon-pencil'></span>
 			// </a>
 		// </td>\n";
@@ -120,27 +120,27 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	// }
 	echo "		<td>
 			<a my-action='info' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
-				class='info btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
+				class='info btn btn-primary btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
 				info
 			</a>
 		</td>\n";
 	if ($row['Contact'] == 1){
 		echo "		<td>
-			<button type='button' class='btn btn-success btn-xs btn-block'>
+			<button type='button' class='btn btn-default btn-xs btn-block'>
 			contacted
 			</button>
 		</td>\n";
 	} else {
 		echo "		<td>
 			<button type='button' class='btn btn-default btn-xs btn-block'>
-				contacted
+			contacted
 			</button>
 		</td>\n";
 	}
 	if ($row['Complete'] == 1){
 		echo "		<td>
 			<a my-action='complete' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
-				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
+				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
 				complete
 			</a>
 		</td>\n";
@@ -155,7 +155,7 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	if ($row['Discard'] == 1){
 		echo "		<td>
 			<a my-action='discard' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
-				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
+				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
 				discard
 			</a>
 		</td>\n";
