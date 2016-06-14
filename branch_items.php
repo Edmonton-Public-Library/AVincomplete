@@ -13,9 +13,11 @@
   <!-- <script src="//cdn.datatables.net/1.10.5/js/jquery.dataTables.min.js"></script> -->
   <!-- added for testing -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+  <!-- <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
-  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+  <!-- <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script> -->
+  <script src="js/bootstrap.min.js"></script>
   <!-- next line moves the table below the Nav-bar. See https://getbootstrap.com/components/#navbar for details -->
   <style>
   body { padding-top: 70px; }
@@ -36,9 +38,9 @@
 	<div id="navbar" class="navbar-collapse collapse">
 	  <ul class="nav navbar-nav navbar-right">
 		<li><a href="https://staffweb.epl.ca/"><img src="https://avatars2.githubusercontent.com/u/4293855?v=3&s=20"/></a></li>
-		<li><a href="index.php"><span class="glyphicon glyphicon-home"></span></a></li>
-		<li><a href="branch_items.php?branch=ALL"><span class="glyphicon glyphicon-wrench"></span></a></li>
-		<li><a href="help.php"><span class="glyphicon glyphicon-info-sign"></span></a></li>
+		<li><a href='index.php'>Home</a></li>
+		<li><a href='branch_items.php?branch=ALL'>All AVI</a></li>
+		<li><a href='help.php'>Help</a></li>
 	  </ul>
 	</div>
   </div>
@@ -119,19 +121,19 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 	echo "		<td>
 			<a my-action='info' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
 				class='info btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
-				<span class='glyphicon glyphicon-question-sign'></span>
+				info
 			</a>
 		</td>\n";
 	if ($row['Contact'] == 1){
 		echo "		<td>
 			<button type='button' class='btn btn-success btn-xs btn-block'>
-				<span class='glyphicon glyphicon-earphone'></span>?
+			contacted
 			</button>
 		</td>\n";
 	} else {
 		echo "		<td>
 			<button type='button' class='btn btn-default btn-xs btn-block'>
-				<span class='glyphicon glyphicon-earphone'></span>?
+				contacted
 			</button>
 		</td>\n";
 	}
@@ -139,14 +141,14 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 		echo "		<td>
 			<a my-action='complete' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
 				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
-				<span class='glyphicon glyphicon-ok'></span>
+				complete
 			</a>
 		</td>\n";
 	} else {
 		echo "		<td>
 			<a my-action='complete' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
 				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
-				<span class='glyphicon glyphicon-ok'></span>
+				complete
 			</a>
 		</td>\n";
 	}
@@ -154,14 +156,14 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 		echo "		<td>
 			<a my-action='discard' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
 				class='av-button btn btn-success btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
-				<span class='glyphicon glyphicon-trash'></span>
+				discard
 			</a>
 		</td>\n";
 	} else {
 		echo "		<td>
 			<a my-action='discard' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
 				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
-				<span class='glyphicon glyphicon-trash'></span>
+				discard
 			</a>
 		</td>\n";
 	}

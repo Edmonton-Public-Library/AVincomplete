@@ -31,6 +31,8 @@ REMOTE=/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/
 LOCAL=~/projects/avincomplete/db/
 APP=notify_customers.sh
 .PHONY: production
+test_running:
+	ps aux | grep avincomplete
 production:
 	scp ${LOCAL}${APP} ${USER}@${PRODUCTION_SERVER}:${REMOTE}
 

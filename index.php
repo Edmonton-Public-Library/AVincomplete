@@ -4,11 +4,13 @@
   <title><?php if (! empty($_GET['branch'])){ echo $_GET['branch']; } ?> AV Incomplete</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+  <!-- <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
   <link rel="stylesheet" href='css/style.css'>
   <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script> -->
   <script src="js/jquery-2.1.1.min.js"></script>
-  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+  <!-- <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script> -->
+  <script src="js/bootstrap.min.js"></script>
 </head>
 <body>
 <div class="container">
@@ -52,8 +54,8 @@
 		</div> <!-- form group -->
 	</form>
 	<p>
-		<a href="#"><span class="glyphicon glyphicon-copyright-mark"></span></a> 2015 Edmonton Public Library&nbsp;
-		<a href="help.php"><span class="glyphicon glyphicon-info-sign"></span></a>&nbsp;
+		<a href="#">copyright (c)</span></a> 2015 Edmonton Public Library&nbsp;
+		<a href="help.php">Help</span></a>&nbsp;
 		<a href="https://staffweb.epl.ca/"><img src="https://avatars2.githubusercontent.com/u/4293855?v=3&s=50"/></a>
 	</p>
 </div> <!-- /container -->

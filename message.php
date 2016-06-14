@@ -4,11 +4,13 @@
   <title>AV Incomplete</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+  <!-- <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
   <link rel="stylesheet" href='css/style.css'>
   <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script> -->
   <script src="js/jquery-2.1.1.min.js"></script>
-  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+  <!-- <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script> -->
+  <script src="js/bootstrap.min.js"></script>
 </head>
 <body>
 <nav class="navbar navbar-inverse navbar-fixed-top">
@@ -24,9 +26,9 @@
 	</div>
 	<div id="navbar" class="navbar-collapse collapse">
 	  <ul class="nav navbar-nav navbar-right">
-		<li><a href="index.php"><span class="glyphicon glyphicon-home"></span></a></li>
-		<li><a href="branch_items.php?branch=ALL"><span class="glyphicon glyphicon-wrench"></span></a></li>
-		<li><a href="help.php"><span class="glyphicon glyphicon-info-sign"></span></a></li>
+		<li><a href='index.php'>Home</a></li>
+		<li><a href='branch_items.php?branch=ALL'>All AVI</a></li>
+		<li><a href='help.php'>Help</a></li>
 	  </ul>
 	</div>
   </div>
@@ -51,7 +53,7 @@
 						</p>
 				<a href="index.php">
 					<button type="button" class="btn btn-primary btn-block">
-						<span class="glyphicon glyphicon-home"></span>
+						Home
 					</button>
 				</a> 
 			</p>

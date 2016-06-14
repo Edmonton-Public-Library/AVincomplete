@@ -4,11 +4,13 @@
   <title><?php if (! empty($_GET['branch'])){ echo $_GET['branch']; } ?> AV Incomplete</title>
   <meta charset='utf-8'>
   <meta name='viewport' content='width=device-width, initial-scale=1'>
-  <link rel='stylesheet' href='http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css'>
+  <!-- <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
   <link rel='stylesheet' href='css/style.css'>
   <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script> -->
   <script src="js/jquery-2.1.1.min.js"></script>
-  <script src='http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js'></script>
+  <!-- <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script> -->
+  <script src="js/bootstrap.min.js"></script>
 </head>
 <body>
 <nav class='navbar navbar-inverse navbar-fixed-top'>
@@ -24,9 +26,9 @@
 	</div>
 	<div id='navbar' class='navbar-collapse collapse'>
 	  <ul class='nav navbar-nav navbar-right'>
-		<li><a href='index.php'><span class='glyphicon glyphicon-home'></span></a></li>
-		<li><a href='branch_items.php?branch=ALL'><span class='glyphicon glyphicon-wrench'></span></a></li>
-		<li><a href='help.php'><span class='glyphicon glyphicon-info-sign'></span></a></li>
+		<li><a href='index.php'>Home</a></li>
+		<li><a href='branch_items.php?branch=ALL'>All AVI</a></li>
+		<li><a href='help.php'>Help</a></li>
 	  </ul>
 	</div>
   </div>
@@ -124,10 +126,10 @@ if (! $row['count']){
 					<a id='complete_it' href='#' my-action='complete' item_id='$item' branch='$branch' 
 						class='av-button btn btn-default btn-primary btn-lg'
 						data-toggle='modal' data-target='.bs-example-modal-lg'>
-							<span class='glyphicon glyphicon-ok'></span>
+						Ok
 					</a>";
 		} else {
-			echo "Transit to <kbd>".$row['Location']."</kbd>, and collect a star.<span class='glyphicon glyphicon-star'></span>";
+			echo "Transit to <kbd>".$row['Location']."</kbd>, and collect a star.";
 			echo "<p>
 					<a id='transit_it' href='#' my-action='transit' item_id='$item' branch='$branch' 
 						class='av-button btn btn-default btn-primary btn-lg'
@@ -141,7 +143,7 @@ if (! $row['count']){
 }
 echo "<a href='index.php'>";
 echo "<button type='button' class='btn btn-default btn-lg'>";
-echo "<span class='glyphicon glyphicon-home'></span>";
+echo "Home";
 echo "</button>";
 echo "</a></p>";
 $db->close();
