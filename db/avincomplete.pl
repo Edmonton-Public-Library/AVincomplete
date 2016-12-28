@@ -46,6 +46,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.12.01 - Add expiry of 1 year when creating holds.
 #          0.12.00 - Remove DISCARD handling logic, not required, just use a single card.
 #          0.11.00 - Discard to one specific card. No need for branch discard cards.
 #          0.10.00 - Added clean avincomplete shelf list reports.
@@ -548,7 +549,7 @@ sub placeHoldForItem( $ )
 		{
 			if ( $branch ne '' )
 			{
-				`echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -l"EPL$branch" -B"$branchCard" -U'`;
+				`echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -l"EPL$branch" -B"$branchCard" -Ue'`;
 				print STDERR "Ok: copy hold place on item '$itemId' for '$branchCard'.\n";
 			}
 			else # Couldn't find the branch for this avsnag card.
