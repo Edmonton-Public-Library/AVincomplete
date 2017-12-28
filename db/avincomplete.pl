@@ -202,7 +202,8 @@ RIV-DISCARD, for a discard card.
      use '-e60'.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
  -l: Checks all items in the database to determine if the item has changed current location
-     and if the current location is not CHECKEDOUT, but LOST, LOST-ASSUM, STOLEN.
+     and if the current location is one of @ITEM_LOCATIONS_OF_INTEREST.  
+     If it is it will remove the item from AVIncomplete database and log the transaction to load.log.
  -n: Send out notifications of incomplete materials. Customers with emails will be emailed
      from the production server. This also triggers emails to customers whose items have been
      marked complete.
