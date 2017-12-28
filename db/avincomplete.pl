@@ -24,7 +24,9 @@
 #   b) find the last date
 #
 # Finds and reports last users of AVIncomplete items and prints their addresses.
-#    Copyright (C) 2015  Andrew Nisbet, Edmonton Public Library.
+#    Copyright (C) 2015-2017  Andrew Nisbet, Edmonton Public Library.
+#    Edmonton Public Library acknowledges that it is located on Treaty 6 lands, which are
+#    are home to the Cree, ... First Nations people.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,9 +45,11 @@
 #
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Dependencies: seluser, selitem, selcatalog, selhold, selcharge, chargeitems.pl
-#               createholds.pl, cancelholds.pl, dischargeitem.pl.
+#               createholds.pl, cancelholds.pl, dischargeitem.pl, pipe.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.13.01 - Add check for item-location change that may indicate the item has been recovered.
+#          0.13.00 - Refactor server variable to make it easier to transplant this process to other libraries.
 #          0.12.01 - Add expiry of 1 year when creating holds.
 #          0.12.00 - Remove DISCARD handling logic, not required, just use a single card.
 #          0.11.00 - Discard to one specific card. No need for branch discard cards.
@@ -105,7 +109,11 @@ my $TEMP_DIR               = "/tmp";
 my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
 my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
 my $DISCARD_CARD_ID        = "ILS-DISCARD";
-my $VERSION                = qq{0.12.00};
+my $VERSION                = qq{0.13.01};
+my $ILS_HOST               = qq{sirsi\@eplapp.library.ualberta.ca}; # Change this to your site's ILS host name.
+# If an item is found in one of these locations, avincomplete will remove it in case the app is not updated.
+my @ITEM_LOCATIONS_OF_INTEREST = ("BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD");
+my @CUSTOMER_PROFILES      = ("EPL_ADULT");
 
 # Writes data to a temp file and returns the name of the file with path.
 # param:  unique name of temp file, like master_list, or 'hold_keys'.
@@ -544,12 +552,12 @@ sub placeHoldForItem( $ )
 		print "\n\n\n Branch card: '$branchCard' \n\n\n";
 		# Does a hold exist for this item on this card? If there is no hold it will return nothing.
 		# echo ABB-AVINCOMPLETE | seluser -iB | selhold -iU -oI | selitem -iI -oB | grep $itemId # will output all the ids 
-		my $hold = `echo "$branchCard|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | seluser -iB | selhold -iU -jACTIVE -oI | selitem -iI -oB | grep $itemId'`; # will output all the ids 
+		my $hold = `echo "$branchCard|" | ssh "$ILS_HOST" 'cat - | seluser -iB | selhold -iU -jACTIVE -oI | selitem -iI -oB | grep $itemId'`; # will output all the ids 
 		if ( $hold eq '' )
 		{
 			if ( $branch ne '' )
 			{
-				`echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | createholds.pl -l"EPL$branch" -B"$branchCard" -Ue'`;
+				`echo "$itemId|" | ssh "$ILS_HOST" 'cat - | createholds.pl -l"EPL$branch" -B"$branchCard" -Ue'`;
 				print STDERR "Ok: copy hold place on item '$itemId' for '$branchCard'.\n";
 			}
 			else # Couldn't find the branch for this avsnag card.
@@ -612,12 +620,10 @@ END_SQL
 sub isCheckedOutToCustomer( $ )
 {
 	my $itemId = shift;
-	# my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -om'`;
-	my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oIm | selcharge -iI -oUS | seluser -iU -oSB'`;
-	# On success: 'CHECKEDOUT|21221022896929|' on fail: ''
-	# Here we check if we get at least 12 digits because system cards are letters and L-PASS and ME have different 
-	# numbers but all more than 12.
-	return 1 if ( $locationCheck =~ m/CHECKEDOUT/ and $locationCheck =~ m/\d{12}/ );
+	my $profileCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIm | selcharge -iI -oUS | seluser -iU -oSBp'`;
+	# On success: 'CHECKEDOUT|21221022896929|EPL_ADULT|' on fail: ''
+	# test if the profile can be found in the list of customer profiles AND is checked out.
+	return 1 if ( $profileCheck =~ m/CHECKEDOUT/ && grep( /($profileCheck)/, @CUSTOMER_PROFILES ) );
 	return 0;
 }
 
@@ -628,11 +634,7 @@ sub isCheckedOutToCustomer( $ )
 sub isCheckedOutToSystemCard( $ )
 {
 	my $itemId = shift;
-	my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oIm | selcharge -iI -oUS | seluser -iU -oSB'`;
-	# On success: 'CHECKEDOUT|WOO-AVINCOMPLETE|' on fail: ''
-	# Here we check we don't have 12 digits because system cards are letters and L-PASS and ME have different 
-	# numbers but all customer cards have 12 or more digits.
-	return 1 if ( $locationCheck =~ m/CHECKEDOUT/ and $locationCheck !~ m/\d{12}/ );
+	return 1 if ( isCheckedOutToCustomer( $itemId ) );
 	return 0;
 }
 
@@ -643,8 +645,8 @@ sub isCheckedOutToSystemCard( $ )
 sub isCheckedOut( $ )
 {
 	my $itemId = shift;
-	# my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -om'`;
-	my $locationCheck = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -om'`;
+	# my $locationCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -om'`;
+	my $locationCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -om'`;
 	# On success: 'CHECKEDOUT|' on fail: ''
 	return 1 if ( $locationCheck =~ m/CHECKEDOUT/ );
 	return 0;
@@ -659,7 +661,7 @@ sub updateCurrentUser( $ )
 	my $itemId = shift;
 	# UPDATE avincomplete SET Title=?, UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
 	# WHERE ItemId=?
-	my $sqlAPI = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oI | selcharge -iI -oU | seluser -iU -oUBDX.9026.X.9007.'`;
+	my $sqlAPI = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oI | selcharge -iI -oU | seluser -iU -oUBDX.9026.X.9007.'`;
 	# returns: '564906|21221012345678|V, Brooke|780-xxx-xxxx|xxxxxxxx@hotmail.com|'
 	# but we need:
 	#31221098551174|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
@@ -679,7 +681,7 @@ sub updatePreviousUser( $ )
 	# UPDATE avincomplete SET Title=?, UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
 	# WHERE ItemId=?
 	########################## TODO finish finding the previous user.
-	my $sqlAPI = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -os | seluser -iU -oUBDX.9026.X.9007.'`;
+	my $sqlAPI = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -os | seluser -iU -oUBDX.9026.X.9007.'`;
 	# returns: '871426|21221021008682|W, T|780-644-nnnn|email@foo.bar|'
 	# but we need:
 	#31221098551174|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
@@ -695,7 +697,7 @@ sub updatePreviousUser( $ )
 sub isInILS( $ )
 {
 	my $itemId = shift;
-	my $returnString = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB'`;
+	my $returnString = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB'`;
 	return 1 if ( $returnString =~ m/\d+/ );
 	return 0;
 }
@@ -708,7 +710,7 @@ sub updateTitle( $ )
 	my $itemId = shift;
 	# UPDATE avincomplete SET Title=?, UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
 	# WHERE ItemId=?
-	my $sqlAPI = `echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oC | selcatalog -iC -ot'`;
+	my $sqlAPI = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oC | selcatalog -iC -ot'`;
 	#31221098551174|(Item not found in ILS)|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
 	chomp( $sqlAPI );
 	$sqlAPI = $itemId . "|" . $sqlAPI . "0|0|Unknown|0|none|";
@@ -788,7 +790,7 @@ sub checkOutItemToAVSnag( $ )
 		print "\n Branch SNAG card: '$branchCard' \n";
 		if ( $branch ne '' )
 		{
-			`echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | chargeitems.pl -b -u"$branchCard" -U'`;
+			`echo "$itemId|" | ssh "$ILS_HOST" 'cat - | chargeitems.pl -b -u"$branchCard" -U'`;
 			print STDERR "Ok: item '$itemId' checked out to '$branchCard'.\n";
 		}
 		else # Couldn't find the branch for this avsnag card.
@@ -817,7 +819,7 @@ sub cancelHolds( $ )
 		print STDERR "\n Checking and removing holds for '$branchCard'.\n";
 		# Here we just instruct the script to remove the hold for the item. The script will not remove holds
 		# on items if the user doesn't have a hold.
-		`echo "$itemId|" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | cancelholds.pl -B"$branchCard" -U'`;
+		`echo "$itemId|" | ssh "$ILS_HOST" 'cat - | cancelholds.pl -B"$branchCard" -U'`;
 		print STDERR "Ok: any holds for item '$itemId' removed from '$branchCard'.\n";
 	}
 }
@@ -932,7 +934,7 @@ sub init
 			chomp $stationLibrary;
 			$stationLibrary = 'EPL' . $stationLibrary;
 			# Add station library to discharge -s"EPLWHP"
-			`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
+			`echo "$itemId" | ssh "$ILS_HOST" 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
 			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE >>complete.log 2>&1`;
 			## remove from the av incomplete database.
 			`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
@@ -1000,9 +1002,9 @@ sub init
 				chomp $stationLibrary;
 				$stationLibrary = 'EPL' . $stationLibrary;
 				# Add station library to discharge -s"EPLWHP"
-				`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
+				`echo "$itemId" | ssh "$ILS_HOST" 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
 				print STDERR "charging $itemId, to $branchDiscardCard.\n waiting for dischargeitem.pl to complete.\n";
-				`echo "$itemId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | chargeitems.pl -b -u"$branchDiscardCard" -U'`;
+				`echo "$itemId" | ssh "$ILS_HOST" 'cat - | chargeitems.pl -b -u"$branchDiscardCard" -U'`;
 			}
 			# and no matter what, record what you are about to remove from AVI.
 			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE >>discard.log 2>&1`;
@@ -1067,7 +1069,7 @@ sub init
 	if ( $opt{'U'} )
 	{
 		# Find all the AV Snag cards in the system, then iterate over them to find all the items charged.
-		my $selectSnagCards = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL_AVSNAG" -oUB'`;
+		my $selectSnagCards = `ssh "$ILS_HOST" 'seluser -p"EPL_AVSNAG" -oUB'`;
 		# Looks like: '604887|WMC-AVINCOMPLETE|'
 		my @data = split '\n', $selectSnagCards;
 		while (@data)
@@ -1082,7 +1084,7 @@ sub init
 			# Later we must include the library code whenever we insert a new item so get it now.
 			my $libCode = getLibraryCode( $userKeyUserId );
 			# Now find all the charges for this card. The output looks like this: '31221104409748  |'
-			my $selectCardCharges = `echo "$userKeyUserId" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selcharge -iU -oIS | selitem -iI -oB'`;
+			my $selectCardCharges = `echo "$userKeyUserId" | ssh "$ILS_HOST" 'cat - | selcharge -iU -oIS | selitem -iI -oB'`;
 			my @itemList = split '\n', $selectCardCharges;
 			while ( @itemList )
 			{
@@ -1109,7 +1111,7 @@ sub init
 	# Create table of system cards for holds and checkouts.
 	if ( $opt{'c'} ) 
 	{
-		my $apiResults = `ssh sirsi\@eplapp.library.ualberta.ca 'seluser -p"EPL_AVSNAG" -oUB'`;
+		my $apiResults = `ssh "$ILS_HOST" 'seluser -p"EPL_AVSNAG" -oUB'`;
 		# which produces:
 		# ...
 		# 836641|DLI-SNAGS|
@@ -1168,7 +1170,7 @@ END_SQL
 		{
 			# Copy the file over to the production machine ready for the next run of mailerbot.
 			my $destDir = "/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/";
-			`scp $customerFile sirsi\@eplapp.library.ualberta.ca:$destDir`;
+			`scp $customerFile "$ILS_HOST":$destDir`;
 			print STDERR "file $customerFile copied to application server\n";
 			# Set notified date on entry.
 			`echo 'UPDATE avincomplete SET Notified=1, NoticeDate="$DATE" WHERE Comments NOT NULL AND Notified=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE`;
@@ -1187,7 +1189,7 @@ END_SQL
 		{
 			# Duplicated from above, but 
 			my $destDir = "/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/";
-			`scp $CUSTOMER_COMPLETE_FILE sirsi\@eplapp.library.ualberta.ca:$destDir`;
+			`scp $CUSTOMER_COMPLETE_FILE "$ILS_HOST":$destDir`;
 			printf STDERR "file '%s' copied to application server for e-mailing.\n", $CUSTOMER_COMPLETE_FILE;
 			# Remove the list of complete customers.
 			printf STDERR "removing file '%s'.\n", $CUSTOMER_COMPLETE_FILE;
@@ -1206,26 +1208,31 @@ END_SQL
 		## Process items in the AVI database, remove items that have been marked LOST-ASSUM, etc. See @NON_AVI_LOCATIONS.
 		my $results = `echo 'SELECT ItemId FROM avincomplete;' | sqlite3 $DB_FILE`;
 		my $itemIdFile = create_tmp_file( "avi_l_00", $results );
-		$results = `cat "$itemIdFile" | ssh sirsi\@eplapp.library.ualberta.ca 'cat - | selitem -iB -oBm'`;
+		$results = `cat "$itemIdFile" | ssh "$ILS_HOST" 'cat - | selitem -iB -oBm'`;
 		$itemIdFile = create_tmp_file( "avi_l_01", $results );
 		$results = `cat "$itemIdFile" | "$PIPE" -t'c0'`;
 		$itemIdFile = create_tmp_file( "avi_l_02", $results );
 		# The list is just items that exist and items that locations that are not checkedout.
 		open DATA, "<$itemIdFile" or die "*** error, unable to open temp file '$itemIdFile', $!.\n";
-		$results = ''; # Reset results.
+		$results = '';
 		while (<DATA>)
 		{
-			my ($itemId, $location) = split '\|', $_;
-			# Sometimes an item can be LOST-ASSUM and CHECKEDOUT. If the item becomes LOST it gets a bill and is discharged.
-			if ( $location !~ /CHECKEDOUT/ and $location !~ /LOST-ASSUM/ and $location !~ /BINDERY/ )
+			my ( $itemId, $location ) = split '\|', $_;
+			# Check locations that indicate that the item has experienced meaningful movement in the ILS
+			# and AVI should clean up its holds.
+			# "BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD"
+			## Added 20170526 with help from Marquita Bevans.
+			# * Remove if items charged to BINDERY can be assumed to be immenantly circ-able so remove from AVI and cancel holds.
+			# * Remove if items in LOST* (LOST, LOST-ASSUM, LOST-CLAIM) can also be removed from AVI.
+			# * Remove if CHECKEDOUT items need to be confirmed as customer (non-system) cards, by profile.
+			# * Remove if not in ILS.
+			# * Remove if DISCARD or STOLEN.
+			if ( ($location =~ /CHECKEDOUT/ && isCheckedOutToCustomer( $itemId )) || grep( /($location)/, @ITEM_LOCATIONS_OF_INTEREST ) )
 			{
 				chomp $location;
 				printf STDERR "Removing item '%s' from AVI because current location is '%s'.\n", $itemId, $location;
+				# Collect all the items for removal below.
 				$results .= "$itemId\n";
-			}
-			else
-			{
-				printf STDERR "preserving '%s'\n", $itemId;
 			}
 		}
 		close DATA;
@@ -1313,7 +1320,7 @@ END_SQL
 		$results = `cat "$branchSnagCards" | "$PIPE" -dc0`;
 		my $branches = create_tmp_file( "avi_e_uniqsnagcards", $results );
 		# Now we need to work on dates; select all records older than 'n' days ago.
-		$dateAgo = `ssh sirsi\@eplapp.library.ualberta.ca 'transdate -d-$daysAgo'`;
+		$dateAgo = `ssh "$ILS_HOST" 'transdate -d-$daysAgo'`;
 		$dateAgo = `echo "$dateAgo" | "$PIPE" -m'c0:####-##-##'`;
 		chomp $dateAgo;
 		# Now output the list of items based on branch.
