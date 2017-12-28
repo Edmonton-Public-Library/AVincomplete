@@ -48,6 +48,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl, pipe.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.13.02 - Make item current location check lest strict.
 #          0.13.01 - Add check for item-location change that may indicate the item has been recovered.
 #          0.13.00 - Refactor server variable to make it easier to transplant this process to other libraries.
 #          0.12.01 - Add expiry of 1 year when creating holds.
@@ -109,7 +110,7 @@ my $TEMP_DIR               = "/tmp";
 my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
 my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
 my $DISCARD_CARD_ID        = "ILS-DISCARD";
-my $VERSION                = qq{0.13.01};
+my $VERSION                = qq{0.13.02};
 my $ILS_HOST               = qq{sirsi\@eplapp.library.ualberta.ca}; # Change this to your site's ILS host name.
 # If an item is found in one of these locations, avincomplete will remove it in case the app is not updated.
 my @ITEM_LOCATIONS_OF_INTEREST = ("BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD");
@@ -1227,7 +1228,7 @@ END_SQL
 			# * Remove if CHECKEDOUT items need to be confirmed as customer (non-system) cards, by profile.
 			# * Remove if not in ILS.
 			# * Remove if DISCARD or STOLEN.
-			if ( ($location =~ /CHECKEDOUT/ && isCheckedOutToCustomer( $itemId )) || grep( /($location)/, @ITEM_LOCATIONS_OF_INTEREST ) )
+			if ( grep( /($location)/, @ITEM_LOCATIONS_OF_INTEREST ) )
 			{
 				chomp $location;
 				printf STDERR "Removing item '%s' from AVI because current location is '%s'.\n", $itemId, $location;
