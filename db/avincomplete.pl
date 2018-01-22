@@ -115,6 +115,7 @@ my $ILS_HOST               = qq{sirsi\@eplapp.library.ualberta.ca}; # Change thi
 # If an item is found in one of these locations, avincomplete will remove it in case the app is not updated.
 my @ITEM_LOCATIONS_OF_INTEREST = ("BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD");
 my @CUSTOMER_PROFILES      = ("EPL_ADULT");
+my @SYSTEM_PROFILES        = ("EPL_AVSNAG", "DISCARD"); # Profiles of system cards related to the AVI process.
 
 # Writes data to a temp file and returns the name of the file with path.
 # param:  unique name of temp file, like master_list, or 'hold_keys'.
@@ -632,11 +633,14 @@ sub isCheckedOutToCustomer( $ )
 # This function takes a item ID as an argument, and returns 1 if the current location is CHECKEDOUT and the 
 # account is a system card, and 0 otherwise.
 # param:  Item ID 
-# return: 1 if checkedout location AND to system card, and 0 otherwise.
+# return: 0 if checkedout location AND to system card, and 0 otherwise.
 sub isCheckedOutToSystemCard( $ )
 {
 	my $itemId = shift;
-	return 1 if ( isCheckedOutToCustomer( $itemId ) );
+	my $profileCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIm | selcharge -iI -oUS | seluser -iU -oSBp'`;
+	# On success: 'CHECKEDOUT|CLV-AVINCOMPLETE|EPL_AVSNAG|' on fail: '' if not checked out.
+	# test if the profile can be found in the list of customer profiles AND is checked out.
+	return 1 if ( $profileCheck =~ m/CHECKEDOUT/ && grep( /($profileCheck)/, @SYSTEM_PROFILES ) );
 	return 0;
 }
 
