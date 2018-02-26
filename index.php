@@ -31,6 +31,7 @@
 			<option value='CPL'>CPL</option>
 			<option value='CSD'>CSD</option>
 			<option value='HIG'>HIG</option>
+			<option value='HVY'>HVY</option>
 			<option value='IDY'>IDY</option>
 			<option value='JPL'>JPL</option>
 			<option value='LHL'>LHL</option>
