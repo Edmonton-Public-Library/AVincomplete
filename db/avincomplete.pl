@@ -48,6 +48,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl, pipe.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.13.03 - Fixed error that notified old customers if there was a mail service outage.
 #          0.13.02 - Make item current location check lest strict.
 #          0.13.01 - Add check for item-location change that may indicate the item has been recovered.
 #          0.13.00 - Refactor server variable to make it easier to transplant this process to other libraries.
@@ -110,12 +111,13 @@ my $TEMP_DIR               = "/tmp";
 my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
 my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
 my $DISCARD_CARD_ID        = "ILS-DISCARD";
-my $VERSION                = qq{0.13.02};
+my $VERSION                = qq{0.13.03};
 my $ILS_HOST               = qq{sirsi\@eplapp.library.ualberta.ca}; # Change this to your site's ILS host name.
 # If an item is found in one of these locations, avincomplete will remove it in case the app is not updated.
 my @ITEM_LOCATIONS_OF_INTEREST = ("BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD");
 my @CUSTOMER_PROFILES      = ("EPL_ADULT");
 my @SYSTEM_PROFILES        = ("EPL_AVSNAG", "DISCARD"); # Profiles of system cards related to the AVI process.
+my $AVI_MAIL_DIR           = "/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/";
 
 # Writes data to a temp file and returns the name of the file with path.
 # param:  unique name of temp file, like master_list, or 'hold_keys'.
@@ -1166,36 +1168,29 @@ END_SQL
 	if ( $opt{'n'} )
 	{
 		my $customerFile = "customers.lst";
-		`echo 'SELECT UserId, Title, Comments, ItemId, Location FROM avincomplete WHERE Comments NOT NULL AND Notified=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE >$customerFile`;
+		# Select items that were created today. We don't want this back-notifying if something goes wrong. If the mail outage is long some people might
+		# get notices from weeks ago, and there will be a lot of confusion.
+		`echo 'SELECT UserId, Title, Comments, ItemId, Location FROM avincomplete WHERE Comments NOT NULL AND Notified=0 AND UserId NOT NULL AND CreateDate=CURRENT_DATE;' | sqlite3 $DB_FILE >$customerFile`;
 		# produces: 
 		# 21221023803338|The foolish tortoise [sound recording] / written by Richard Buckley ; [illustrated by] Eric Carle|disc is missing
 		# 21221021920217|Yaiba. Ninja gaiden Z [game] / [developed by Comcept, Spark Unlimited]. --|disc is missing
 		# 21221021499063|Glee. The final season [videorecording]|disc 1 is missing
-		# copy list to EPLAPP.
-		if ( -s $customerFile )
-		{
-			# Copy the file over to the production machine ready for the next run of mailerbot.
-			my $destDir = "/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/";
-			`scp $customerFile "$ILS_HOST":$destDir`;
-			print STDERR "file $customerFile copied to application server\n";
-			# Set notified date on entry.
-			`echo 'UPDATE avincomplete SET Notified=1, NoticeDate="$DATE" WHERE Comments NOT NULL AND Notified=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE`;
-			print STDERR "notification flag set in database.\n";
-		}
-		else
-		{
-			print STDERR "didn't find any new customers to contact. Did staff mark the missing parts on new items?\n";
-		}
+		# copy list to EPLAPP - empty or not. If empty the list will over-write an existing file which might be old.
+		# Copy the file over to the production machine ready for the next run of mailerbot.
+		`scp $customerFile "$ILS_HOST":$AVI_MAIL_DIR`;
+		print STDERR "file $customerFile copied to application server\n";
+		# Set notified date on entry on all notified accounts today. Some may not have been populated with customer data yet if they were just entered
+		# so don't process if user ids are null.
+		`echo 'UPDATE avincomplete SET Notified=1, NoticeDate=CURRENT_DATE WHERE Notified=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE`;
+		print STDERR "notification flag set in database.\n";
 		###### Handle notifying users that their items are complete.
-		# Note: this fucntion used to remove the users that were complete and write them to a log.
+		# Note: this function used to remove the users that were complete and write them to a log.
 		### The file $CUSTOMER_COMPLETE_FILE is created when -t (mark complete) runs. The file collects 
 		### is appended to through out the day and if the file exists it is scp'ed to the ILS for mailing 
 		### at night.
 		if ( -s $CUSTOMER_COMPLETE_FILE )
 		{
-			# Duplicated from above, but 
-			my $destDir = "/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/";
-			`scp $CUSTOMER_COMPLETE_FILE "$ILS_HOST":$destDir`;
+			`scp $CUSTOMER_COMPLETE_FILE "$ILS_HOST":$AVI_MAIL_DIR`;
 			printf STDERR "file '%s' copied to application server for e-mailing.\n", $CUSTOMER_COMPLETE_FILE;
 			# Remove the list of complete customers.
 			printf STDERR "removing file '%s'.\n", $CUSTOMER_COMPLETE_FILE;
