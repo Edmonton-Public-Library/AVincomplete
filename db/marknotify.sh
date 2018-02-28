@@ -29,12 +29,14 @@
 #
 ####################################################
 HOME=/home/ilsdev/projects/avincomplete/db
+ADDRESSES="andrew.nisbet@epl.ca"
 echo `date` >> $HOME/load.log
 test=`ps x | grep avincomplete | wc -l`
 k=10
 if [ $(echo " $test > $k" | bc) -eq 1 ]
 then
 	echo "== process busy." >> $HOME/load.log
+	echo "**Error: backing off of notifying customers because too many other av incomplete processes are running." | mailx -a'From:ilsdev@ilsdev1.epl.ca' -s"AVI report" $ADDRESSES
 	exit 2
 fi
 if [ -s $HOME/avincomplete.pl ]
@@ -49,5 +51,6 @@ then
 	echo "====" >> $HOME/load.log
 else
 	echo "**Error: unable to find $HOME/avincomplete.pl" >>$HOME/load.log 2>&1
+	echo "**Error: unable to find $HOME/avincomplete.pl" | mailx -a'From:ilsdev@ilsdev1.epl.ca' -s"AVI report" $ADDRESSES
 fi
 # EOF
