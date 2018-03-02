@@ -24,19 +24,14 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Tue Apr 14 12:20:04 MDT 2015
 # Rev:     
+#   0.3 - Removed code that backs off if too many processes are running. 
 #   0.2 - Added removal of items that are no longer charged. 
 #   0.1 - Scheduled -n mark customers for notification of missing material. 
 #
 ####################################################
 HOME=/home/ilsdev/projects/avincomplete/db
+ADDRESSES="andrew.nisbet@epl.ca"
 echo `date` >> $HOME/load.log
-test=`ps x | grep avincomplete | wc -l`
-k=10
-if [ $(echo " $test > $k" | bc) -eq 1 ]
-then
-	echo "== process busy." >> $HOME/load.log
-	exit 2
-fi
 if [ -s $HOME/avincomplete.pl ]
 then
 	cd $HOME
@@ -49,5 +44,6 @@ then
 	echo "====" >> $HOME/load.log
 else
 	echo "**Error: unable to find $HOME/avincomplete.pl" >>$HOME/load.log 2>&1
+	echo "**Error: unable to find $HOME/avincomplete.pl" | mailx -a'From:ilsdev@ilsdev1.epl.ca' -s"AVI report" $ADDRESSES
 fi
 # EOF
