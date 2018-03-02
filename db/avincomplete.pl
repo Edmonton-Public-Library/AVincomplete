@@ -48,6 +48,8 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl, pipe.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.14.00 - Added -s and -S.
+#          0.13.04 - Fixed circulation check.
 #          0.13.03 - Fixed error that notified old customers if there was a mail service outage.
 #          0.13.02 - Make item current location check lest strict.
 #          0.13.01 - Add check for item-location change that may indicate the item has been recovered.
@@ -111,13 +113,14 @@ my $TEMP_DIR               = "/tmp";
 my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
 my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
 my $DISCARD_CARD_ID        = "ILS-DISCARD";
-my $VERSION                = qq{0.13.03};
+my $VERSION                = qq{0.13.04};
 my $ILS_HOST               = qq{sirsi\@eplapp.library.ualberta.ca}; # Change this to your site's ILS host name.
 # If an item is found in one of these locations, avincomplete will remove it in case the app is not updated.
 my @ITEM_LOCATIONS_OF_INTEREST = ("BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD");
 my @CUSTOMER_PROFILES      = ("EPL_ADULT");
 my @SYSTEM_PROFILES        = ("EPL_AVSNAG", "DISCARD"); # Profiles of system cards related to the AVI process.
 my $AVI_MAIL_DIR           = "/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/";
+my $RECIRCED_MATERIAL_RPT  = "recirced_materials_report.lst";
 
 # Writes data to a temp file and returns the name of the file with path.
 # param:  unique name of temp file, like master_list, or 'hold_keys'.
@@ -196,7 +199,7 @@ RIV-DISCARD, for a discard card.
      for discard cards. This should be run before -U to ensure all cards are attributable
      to a given branch before we start trying to insert items and place holds on those items.
  -C: Create new database called '$DB_FILE'. If the db exists '-f' must be used.
- -d<card_id>: Sets the discard card to the supplied ID. Default is $DISCARD_CARD_ID.
+ -d{card_id}: Sets the discard card to the supplied ID. Default is $DISCARD_CARD_ID.
  -D: Process items marked as discard. Tests items are in ILS and if so cancels any hold for the
      branch AVSNAG card, discharges them from the card they are currently charged to, 
      then quickly charges them to a discard card (default ILS-DISCARD), then logs the entry and removes
@@ -210,10 +213,12 @@ RIV-DISCARD, for a discard card.
  -n: Send out notifications of incomplete materials. Customers with emails will be emailed
      from the production server. This also triggers emails to customers whose items have been
      marked complete.
- -r<file>: Reload items from file. Must be pipe delimited and match format from output of 
+ -s{item ID}: Check status of a given item in AVI and ILS.  
+ -S{item ID file}: Like -s but check status of all items in file. Item IDs one per line.  
+ -r{file}: Reload items from file. Must be pipe delimited and match format from output of 
      'select * from avincomplete;'. This format is stored in discard.log, complete.log and remove.log.
      If the id exists in the database, the entry will be ignored.
- -R<file>: Removes the item ids listed in <file> (one per line) from the database.
+ -R{file}: Removes the item ids listed in <file> (one per line) from the database.
  -t: Discharge items that are marked complete, removing the copy level hold on any of the
      branches' AVSNAG cards.
  -u: Removes incorrect item ids from the local database, that is items that couldn't be found in the ILS.
@@ -869,12 +874,49 @@ sub removeIncorrectIDs()
 	return $count;
 }
 
+# Check to see if any items in AVI are currently charged to another non-system card. If they are they are
+# back in circulation. 
+# param:  none.
+# reutrn: list of item IDs that are currently charged to a non-system card, and isn't original user that
+#         originally charged the item.
+sub test_different_user_charged_item_complete()
+{
+	my $results = `echo 'SELECT ItemId,UserId FROM avincomplete WHERE Complete=0;' | sqlite3 $DB_FILE`;
+	my $charge_new_users = create_tmp_file( "avi_diff_users_00", $results );
+	$results = `cat $charge_new_users | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIBS | selcharge -iI -tACTIVE -oUS | seluser -iU -oSB'`;
+	# 31221075400577  |21221021821068|29335004649924|
+	# 31221078713059  |21221024249002|LHL-AVINCOMPLETE|
+	my $all_charges = create_tmp_file( "avi_diff_users_01", $results );
+	# Find the columns that don't match each other, and are non-system cards, that is 'AVI-SNAG', 'MISSING' etc.
+	$results = `cat $all_charges | "$PIPE" -tc0 -Bc1,c2 | "$PIPE" -Gc1:"[A-Za-z]+",c2:"[A-Za-z]+"`;
+	my $diff_non_sys_users = create_tmp_file( "avi_diff_users_02", $results );
+	# Some of the items may not be charged don't output columns if there is no new charge. That's why the '-z'.
+	# 31221075400577
+	return `cat $diff_non_sys_users | "$PIPE" -oc0 -zc2`;
+}
+
+# Report on items both in AVI and in ILS.
+# param:  Item Id
+# return: none
+sub report_item( $ )
+{
+	my $itemId = shift;
+	my $avi_result = `echo 'SELECT ItemId,UserId,CreateDate,Location,Title,Comments FROM avincomplete WHERE ItemId="$itemId";' | sqlite3 $DB_FILE`;
+	$avi_result = `echo "$avi_result" | $PIPE -mc4:########################_ -h', ' -oc0,c2,c3,c4,c5,c1 -H`;
+	# 31221216060256|21221025388387|2018-01-09|LHL|Nathan for you. Season one [videorecording]|case missing
+	#            31221216060256, 21221025388387, 2018-01-09, LHL, Nathan for you. Season o, case missing
+	printf STDERR "AVI reports: %s\n", $avi_result;
+	my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIBlmyt | selcharge -iI -oUS | seluser -iU -oSB' 2>/dev/null`;
+	$ils_results = `echo "$ils_results" | "$PIPE" -tc0 -h', ' -H`;
+	printf STDERR "ILS reports: %s\n\n", $ils_results;
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
 sub init
 {
-    my $opt_string = 'acCd:De:flnr:R:tuUx';
+    my $opt_string = 'acCd:De:flnr:R:s:S:tuUx';
     getopts( "$opt_string", \%opt ) or usage();
     usage() if ( $opt{'x'} );
 	# Audit all items in the database to ensure that if they are not checked out, that they get checked out to
@@ -905,7 +947,7 @@ sub init
 		}
 	}
 	# This looks for items that are marked complete and discharges them from the card they are checked out to.
-	# Note: this fucntion used to remove the users that were complete and write them to a log. We now want to
+	# Note: this function used to remove the users that were complete and write them to a log. We now want to
 	# notify customers that have the item still checked out, that their item was marked complete. See -n notify
 	# flag below.
 	if ( $opt{'t'} ) 
@@ -1206,14 +1248,42 @@ END_SQL
 	if ( $opt{'l'} )
 	{
 		print STDERR "Checking items current location has changed.\n";
+		## Start by marking items that are currently actively charged to another non-system card. 
+		## These can be marked complete since they are circulating with another user.
+		my $results = test_different_user_charged_item_complete();
+		my $items_cko_new_users = create_tmp_file( "avi_l_0A", $results );
+		# For each one of these items, we could mark them complete in the database. There is a complete process 
+		# that will remove the holds when the time comes (see '-t'). The next step is to mark them complete in AVI.
+		# This process marks items complete only if it is cko to another non-system card.
+		# 31221075400577
+		open ITEMS_FILE_HANDLE, "<$items_cko_new_users" or die "*** error, unable to open temp file '$items_cko_new_users', $!.\n";
+		open FH, '>>', $RECIRCED_MATERIAL_RPT or die "Could not open file '$RECIRCED_MATERIAL_RPT' $!";
+		$results = '';
+		my $count = 0;
+		while (<ITEMS_FILE_HANDLE>)
+		{
+			my $itemId = $_;
+			print STDERR "$itemId is back in circulation (cko to another user). Marking it complete in the database.\n";
+			`echo 'UPDATE avincomplete SET Complete=1, CompleteDate=CURRENT_DATE WHERE ItemId="$itemId";' | sqlite3 $DB_FILE`;
+			$results = `echo 'SELECT ItemId,Location,Title,CompleteDate,Comments FROM avincomplete WHERE ItemId="$itemId";' | sqlite3 $DB_FILE`;
+			# This could happen if someone reprints a case and re-circs it, then the other branch should discard this material.
+			# This should be output and mailed to branches so they can discard these materials.
+			print FH "$results";
+			# Now remove the item from the database now because we don't want to send a complete notification to the previous user.
+			$count += removeItemFromAVI( $itemId );
+		}
+		close FH;
+		close ITEMS_FILE_HANDLE;
+		print STDERR "removed %d records of items that were cko to other users.\n", $count;
+		# The next step would select on non-complete items only.
 		## Process items in the AVI database, remove items that have been marked LOST-ASSUM, etc. See @NON_AVI_LOCATIONS.
-		my $results = `echo 'SELECT ItemId FROM avincomplete;' | sqlite3 $DB_FILE`;
+		$results = `echo 'SELECT ItemId FROM avincomplete WHERE Complete=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE`;
 		my $itemIdFile = create_tmp_file( "avi_l_00", $results );
 		$results = `cat "$itemIdFile" | ssh "$ILS_HOST" 'cat - | selitem -iB -oBm'`;
 		$itemIdFile = create_tmp_file( "avi_l_01", $results );
 		$results = `cat "$itemIdFile" | "$PIPE" -t'c0'`;
 		$itemIdFile = create_tmp_file( "avi_l_02", $results );
-		# The list is just items that exist and items that locations that are not checkedout.
+		# The list is just items that exist and items that locations that are not checked out.
 		open DATA, "<$itemIdFile" or die "*** error, unable to open temp file '$itemIdFile', $!.\n";
 		$results = '';
 		while (<DATA>)
@@ -1223,7 +1293,7 @@ END_SQL
 			# and AVI should clean up its holds.
 			# "BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD"
 			## Added 20170526 with help from Marquita Bevans.
-			# * Remove if items charged to BINDERY can be assumed to be immenantly circ-able so remove from AVI and cancel holds.
+			# * Remove if items charged to BINDERY can be assumed to be immanently circ-able so remove from AVI and cancel holds.
 			# * Remove if items in LOST* (LOST, LOST-ASSUM, LOST-CLAIM) can also be removed from AVI.
 			# * Remove if CHECKEDOUT items need to be confirmed as customer (non-system) cards, by profile.
 			# * Remove if not in ILS.
@@ -1309,7 +1379,31 @@ END_SQL
 		clean_up();
 		exit 0;
 	}
-	
+	if ( $opt{'s'} )
+	{
+		if ( $opt{'s'} !~ m/\d{14}/ )
+		{
+			printf STDERR "** error, %s doesn't look like a valid item ID for EPL.\n", $opt{'s'};
+			exit 2;
+		}
+		report_item( $opt{'s'} );
+		exit 0;
+	}
+	if ( $opt{'S'} )
+	{
+		if ( ! -s $opt{'S'} )
+		{
+			printf STDERR "** error, %s doesn't look like a file of item IDs.\n", $opt{'S'};
+			exit 2;
+		}
+		open FH, "<$opt{'S'}" or die "*** error, unable to open input file '$opt{'S'}', $!.\n";
+		while( <FH> )
+		{
+			report_item( $_ );
+		}
+		close FH;
+		exit 0;
+	}
 	# Produce clean av incomplete shelf list.
 	if ( $opt{'e'} )
 	{
