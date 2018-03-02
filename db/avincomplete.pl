@@ -48,6 +48,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl, pipe.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.14.01 - Fix issue of re-appearing discards.
 #          0.14.00 - Added -s and -S.
 #          0.13.04 - Fixed circulation check.
 #          0.13.03 - Fixed error that notified old customers if there was a mail service outage.
@@ -113,7 +114,7 @@ my $TEMP_DIR               = "/tmp";
 my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
 my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
 my $DISCARD_CARD_ID        = "ILS-DISCARD";
-my $VERSION                = qq{0.13.04};
+my $VERSION                = qq{0.14.01};
 my $ILS_HOST               = qq{sirsi\@eplapp.library.ualberta.ca}; # Change this to your site's ILS host name.
 # If an item is found in one of these locations, avincomplete will remove it in case the app is not updated.
 my @ITEM_LOCATIONS_OF_INTEREST = ("BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD");
@@ -630,7 +631,7 @@ END_SQL
 sub isCheckedOutToCustomer( $ )
 {
 	my $itemId = shift;
-	my $profileCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIm | selcharge -iI -oUS | seluser -iU -oSBp'`;
+	my $profileCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIm | selcharge -iI -tACTIVE -oUS | seluser -iU -oSBp'`;
 	# On success: 'CHECKEDOUT|21221022896929|EPL_ADULT|' on fail: ''
 	# test if the profile can be found in the list of customer profiles AND is checked out.
 	return 1 if ( $profileCheck =~ m/CHECKEDOUT/ && grep( /($profileCheck)/, @CUSTOMER_PROFILES ) );
@@ -644,7 +645,7 @@ sub isCheckedOutToCustomer( $ )
 sub isCheckedOutToSystemCard( $ )
 {
 	my $itemId = shift;
-	my $profileCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIm | selcharge -iI -oUS | seluser -iU -oSBp'`;
+	my $profileCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIm | selcharge -iI -tACTIVE -oUS | seluser -iU -oSBp'`;
 	# On success: 'CHECKEDOUT|CLV-AVINCOMPLETE|EPL_AVSNAG|' on fail: '' if not checked out.
 	# test if the profile can be found in the list of customer profiles AND is checked out.
 	return 1 if ( $profileCheck =~ m/CHECKEDOUT/ && grep( /($profileCheck)/, @SYSTEM_PROFILES ) );
@@ -674,7 +675,7 @@ sub updateCurrentUser( $ )
 	my $itemId = shift;
 	# UPDATE avincomplete SET Title=?, UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
 	# WHERE ItemId=?
-	my $sqlAPI = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oI | selcharge -iI -oU | seluser -iU -oUBDX.9026.X.9007.'`;
+	my $sqlAPI = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oI | selcharge -iI -tACTIVE -oU | seluser -iU -oUBDX.9026.X.9007.'`;
 	# returns: '564906|21221012345678|V, Brooke|780-xxx-xxxx|xxxxxxxx@hotmail.com|'
 	# but we need:
 	#31221098551174|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
@@ -906,7 +907,7 @@ sub report_item( $ )
 	# 31221216060256|21221025388387|2018-01-09|LHL|Nathan for you. Season one [videorecording]|case missing
 	#            31221216060256, 21221025388387, 2018-01-09, LHL, Nathan for you. Season o, case missing
 	printf STDERR "AVI reports: %s\n", $avi_result;
-	my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIBlmyt | selcharge -iI -oUS | seluser -iU -oSB' 2>/dev/null`;
+	my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIBlmyt | selcharge -iI -oUtS | seluser -iU -oSB' 2>/dev/null`;
 	$ils_results = `echo "$ils_results" | "$PIPE" -tc0 -h', ' -H`;
 	printf STDERR "ILS reports: %s\n\n", $ils_results;
 }
@@ -1134,7 +1135,7 @@ sub init
 			# Later we must include the library code whenever we insert a new item so get it now.
 			my $libCode = getLibraryCode( $userKeyUserId );
 			# Now find all the charges for this card. The output looks like this: '31221104409748  |'
-			my $selectCardCharges = `echo "$userKeyUserId" | ssh "$ILS_HOST" 'cat - | selcharge -iU -oIS | selitem -iI -oB'`;
+			my $selectCardCharges = `echo "$userKeyUserId" | ssh "$ILS_HOST" 'cat - | selcharge -iU -tACTIVE -oIS | selitem -iI -oB'`;
 			my @itemList = split '\n', $selectCardCharges;
 			while ( @itemList )
 			{
