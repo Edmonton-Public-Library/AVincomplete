@@ -48,6 +48,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl, pipe.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.14.02 - Fix issue of item in circulation isn't being detectes as such.
 #          0.14.01 - Fix issue of re-appearing discards.
 #          0.14.00 - Added -s and -S.
 #          0.13.04 - Fixed circulation check.
@@ -96,6 +97,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 use DBI;
 
+my $VERSION                = qq{0.14.02};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -114,10 +116,9 @@ my $TEMP_DIR               = "/tmp";
 my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
 my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
 my $DISCARD_CARD_ID        = "ILS-DISCARD";
-my $VERSION                = qq{0.14.01};
 my $ILS_HOST               = qq{sirsi\@eplapp.library.ualberta.ca}; # Change this to your site's ILS host name.
 # If an item is found in one of these locations, avincomplete will remove it in case the app is not updated.
-my @ITEM_LOCATIONS_OF_INTEREST = ("BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD");
+my @ITEM_LOCATIONS_OF_INTEREST = ("BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD", "HOLDS");
 my @CUSTOMER_PROFILES      = ("EPL_ADULT");
 my @SYSTEM_PROFILES        = ("EPL_AVSNAG", "DISCARD"); # Profiles of system cards related to the AVI process.
 my $AVI_MAIL_DIR           = "/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/";
@@ -659,7 +660,6 @@ sub isCheckedOutToSystemCard( $ )
 sub isCheckedOut( $ )
 {
 	my $itemId = shift;
-	# my $locationCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -om'`;
 	my $locationCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -om'`;
 	# On success: 'CHECKEDOUT|' on fail: ''
 	return 1 if ( $locationCheck =~ m/CHECKEDOUT/ );
@@ -884,9 +884,13 @@ sub test_different_user_charged_item_complete()
 {
 	my $results = `echo 'SELECT ItemId,UserId FROM avincomplete WHERE Complete=0;' | sqlite3 $DB_FILE`;
 	my $charge_new_users = create_tmp_file( "avi_diff_users_00", $results );
+	# 31221113625110|21221021719742
+	# This won't find things where the item isn't charged, or the charge is inactive.
 	$results = `cat $charge_new_users | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIBS | selcharge -iI -tACTIVE -oUS | seluser -iU -oSB'`;
 	# 31221075400577  |21221021821068|29335004649924|
 	# 31221078713059  |21221024249002|LHL-AVINCOMPLETE|
+	# or 
+	# '**error number 111 on charge read_charge_item_key start, cat=797934 seq=200 copy=1 charge=0 primary=0 user=0' if it's not charged.
 	my $all_charges = create_tmp_file( "avi_diff_users_01", $results );
 	# Find the columns that don't match each other, and are non-system cards, that is 'AVI-SNAG', 'MISSING' etc.
 	$results = `cat $all_charges | "$PIPE" -tc0 -Bc1,c2 | "$PIPE" -Gc1:"[A-Za-z]+",c2:"[A-Za-z]+"`;
