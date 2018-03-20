@@ -48,6 +48,7 @@
 #               createholds.pl, cancelholds.pl, dischargeitem.pl, pipe.pl.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
+#          0.14.03 - Remove branch system card holds for items removed from AVI db.
 #          0.14.02 - Fix issue of item in circulation isn't being detectes as such.
 #          0.14.01 - Fix issue of re-appearing discards.
 #          0.14.00 - Added -s and -S.
@@ -97,7 +98,7 @@ use vars qw/ %opt /;
 use Getopt::Std;
 use DBI;
 
-my $VERSION                = qq{0.14.02};
+my $VERSION                = qq{0.14.03};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -818,7 +819,7 @@ sub checkOutItemToAVSnag( $ )
 	}
 }
 
-# Checks and removes holds from the branches' AV snag card.
+# Checks and removes holds from the branches' AV snag cards.
 # param:  item ID as a string.
 # return: <none>
 sub cancelHolds( $ )
@@ -849,6 +850,8 @@ sub removeItemFromAVI( $ )
 	{
 		# record what you are about to remove.
 		`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId;' | sqlite3 $DB_FILE >>removed.log 2>&1`;
+		# Remove holds if charged to an AVIncomplete card.
+		cancelHolds( $itemId );
 		# remove from the av incomplete database.
 		`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId;' | sqlite3 $DB_FILE`;
 		return 1;
