@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang='en'>
 <head>
-  <title><?php if (! empty($_GET['branch'])){ echo $_GET['branch']; } ?> AV Incomplete</title>
+  <title><?php if (! empty($_GET['branch'])){ echo $_GET['branch']; } ?> Incomplete Item</title>
   <meta charset='utf-8'>
   <meta name='viewport' content='width=device-width, initial-scale=1'>
   <!-- <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
@@ -22,12 +22,12 @@
 		<span class='icon-bar'></span>
 		<span class='icon-bar'></span>
 	  </button>
-	  <a class='navbar-brand' href='index.php'>EPL AV Incomplete</a>
+	  <a class='navbar-brand' href='index.php'>EPL Incomplete Item</a>
 	</div>
 	<div id='navbar' class='navbar-collapse collapse'>
 	  <ul class='nav navbar-nav navbar-right'>
 		<li><a href='index.php'>Home</a></li>
-		<li><a href='branch_items.php?branch=ALL'>All AVI</a></li>
+		<li><a href='branch_items.php?branch=ALL'>All Incomplete Items</a></li>
 		<li><a href='help.php'>Help</a></li>
 	  </ul>
 	</div>

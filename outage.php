@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>AV Incomplete help</title>
+  <title>Incomplete Item help</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
@@ -22,7 +22,7 @@
 		<span class="icon-bar"></span>
 		<span class="icon-bar"></span>
 	  </button>
-	  <a class="navbar-brand" href="index.php">EPL AV Incomplete</a>
+	  <a class="navbar-brand" href="index.php">EPL Incomplete Item</a>
 	</div>
 	<div id="navbar" class="navbar-collapse collapse">
 	  <ul class="nav navbar-nav navbar-right">
@@ -41,7 +41,7 @@
 	<div class="col-sm-7">
 		<h1 class="sub-header">Aw, nuts!</h1>
 		<p>
-AV incomplete is not available because of on-going network issues, but rest assured we are working hard to get it back on line. In the meantime see your manager for more inforamtion about how to handle AVI materials until we can return to regular service. If you want more information please check Staffweb
+Incomplete Item is not available because of on-going network issues, but rest assured we are working hard to get it back on line. In the meantime see your manager for more inforamtion about how to handle AVI materials until we can return to regular service. If you want more information please check Staffweb
 or contact ILS admins at 780-496-4058 for more details.<br/>
 <img src='images/Network.jpg' />
 		</p>

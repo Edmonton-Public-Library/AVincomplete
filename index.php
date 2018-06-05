@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title><?php if (! empty($_GET['branch'])){ echo $_GET['branch']; } ?> AV Incomplete</title>
+  <title><?php if (! empty($_GET['branch'])){ echo $_GET['branch']; } ?> Incomplete Item</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
@@ -17,7 +17,7 @@
 <div class="col-sm-4">
 	<form role='form' action='data.php' method='GET'>
 	<!-- <form role='form' action='outage.php' method='GET'> -->
-		<h2 class="form-signin-heading">AV incomplete</h2>
+		<h2 class="form-signin-heading">Incomplete Item</h2>
 		<div class="form-group">
 		<label for="sel1">Select your branch:</label>
 		<select class="form-control" id="sel1" name='branch' required>
@@ -55,7 +55,7 @@
 		</div> <!-- form group -->
 	</form>
 	<p>
-		<a href="#">copyright (c)</span></a> 2015 Edmonton Public Library&nbsp;
+		<a href="#">copyright (c)</span></a> 2015-2018 Edmonton Public Library&nbsp;
 		<a href="help.php">Help</span></a>&nbsp;
 		<a href="https://staffweb.epl.ca/"><img src="https://avatars2.githubusercontent.com/u/4293855?v=3&s=50"/></a>
 	</p>
