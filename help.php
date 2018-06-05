@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>AV Incomplete help</title>
+  <title>Incomplete Item help</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
@@ -22,13 +22,13 @@
 		<span class="icon-bar"></span>
 		<span class="icon-bar"></span>
 	  </button>
-	  <a class="navbar-brand" href="index.php">EPL AV Incomplete</a>
+	  <a class="navbar-brand" href="index.php">EPL Incomplete Item</a>
 	</div>
 	<div id="navbar" class="navbar-collapse collapse">
 	  <ul class="nav navbar-nav navbar-right">
 		<li><a href="https://staffweb.epl.ca/"><img src="https://avatars2.githubusercontent.com/u/4293855?v=3&s=20"/></a></li>
 		<li><a href='index.php'>Home</a></li>
-		<li><a href='branch_items.php?branch=ALL'>All AVI</a></li>
+		<li><a href='branch_items.php?branch=ALL'>All Incomplete Items</a></li>
 		<li><a href='help.php'>Help</a></li>
 	  </ul>
 	  <form class="navbar-form navbar-right">
@@ -41,7 +41,7 @@
 	<div class="col-sm-7">
 		<h1 class="sub-header">Help</h1>
 		<p>
-AV incomplete is meant to do as much of the work for staff as possible, thus freeing up your time
+Incomplete Item is meant to do as much of the work for staff as possible, thus freeing up your time
 for more important, and frankly, more interesting things. AV incomplete can do the following task:
 <ul>
 <li>Accept a typed or scanned bar code.</li>
@@ -77,7 +77,7 @@ Missing (or mis-matched) parts include:
 This can also be thought of in terms of an 'active' ingredient, like a DVD disc or a 'inactive' ingredient, like an insert or box.
 <h2 class="sub-header">Project</h2>
 <p>
-Vicky is chairing the AV Incomplete group that is investigating how to reduce the 
+Vicky is chairing the Incomplete Item group that is investigating how to reduce the 
 number of AVSNAG items that end up as DISCARD. The following represents the 
 proposed new AV incomplete method.
 </p>
@@ -94,7 +94,7 @@ AV incomplete procedures.
 
 <h2 class="sub-header">Proposal</h2>
 <p>
-The AV Incomplete Review Team proposes the creation of a web services powered application 
+The Incomplete Item Review Team proposes the creation of a web services powered application 
 that staff will use to mark items AV incomplete. Staff would access this application 
 by navigating to a URL, and would then input an item ID for an incomplete item. 
 The script would work in the following way:
