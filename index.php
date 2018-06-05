@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title><?php if (! empty($_GET['branch'])){ echo $_GET['branch']; } ?> Incomplete Item</title>
+  <title><?php if (! empty($_GET['branch'])){ echo $_GET['branch']; } ?> Incomplete Item*</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"> -->
@@ -57,7 +57,8 @@
 	<p>
 		<a href="#">copyright (c)</span></a> 2015-2018 Edmonton Public Library&nbsp;
 		<a href="help.php">Help</span></a>&nbsp;
-		<a href="https://staffweb.epl.ca/"><img src="https://avatars2.githubusercontent.com/u/4293855?v=3&s=50"/></a>
+		<a href="https://staffweb.epl.ca/"><img src="https://avatars2.githubusercontent.com/u/4293855?v=3&s=50"/></a>&nbsp;
+		(* The app formerly known as AVIncomplete.)
 	</p>
 </div> <!-- /container -->
 <script>
