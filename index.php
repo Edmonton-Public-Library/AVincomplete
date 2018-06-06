@@ -17,7 +17,7 @@
 <div class="col-sm-4">
 	<form role='form' action='data.php' method='GET'>
 	<!-- <form role='form' action='outage.php' method='GET'> -->
-		<h2 class="form-signin-heading">Incomplete Item</h2>
+		<h2 class="form-signin-heading">Incomplete Item*</h2>
 		<div class="form-group">
 		<label for="sel1">Select your branch:</label>
 		<select class="form-control" id="sel1" name='branch' required>
