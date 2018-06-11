@@ -94,13 +94,7 @@ if (! $row['count']){
 		<input id='disc1' type='checkbox' value='disc 1 is missing' />disc 1 is missing<br />
 		<input id='disc2' type='checkbox' value='disc 2 is missing' />disc 2 is missing<br />
 		<input id='disc3' type='checkbox' value='disc 3 is missing' />disc 3 is missing<br />
-		<input id='disc4' type='checkbox' value='disc 4 is missing' />disc 4 is missing<br />
-		<input id='disc5' type='checkbox' value='disc 5 is missing' />disc 5 is missing<br />
-		<input id='disc6' type='checkbox' value='disc 6 is missing' />disc 6 is missing<br />
-		<input id='disc7' type='checkbox' value='disc 7 is missing' />disc 7 is missing<br />
-		<input id='disc8' type='checkbox' value='disc 8 is missing' />disc 8 is missing<br />
-		<input id='disc9' type='checkbox' value='disc 9 is missing' />disc 9 is missing<br />
-		<input id='disc10' type='checkbox' value='disc 10 is missing' />disc 10 is missing<br />
+		disc number <input id='discN' type='number' name='quantity' min='4'> is missing<br />
 		<input id='several' type='checkbox' value='several discs are missing' />several discs are missing<br />
 		<input id='case_not_epls' type='checkbox' value='case does not belong to EPL' />case doesn't belong to EPL<br />
 		<input id='disc_not_epls' type='checkbox' value='disc does not belong to EPL' />disc doesn't belong to EPL<br />
