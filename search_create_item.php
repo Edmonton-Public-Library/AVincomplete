@@ -94,13 +94,7 @@ if (! $row['count']){
 		<input id='disc1' type='checkbox' value='disc 1 is missing' />disc 1 is missing<br />
 		<input id='disc2' type='checkbox' value='disc 2 is missing' />disc 2 is missing<br />
 		<input id='disc3' type='checkbox' value='disc 3 is missing' />disc 3 is missing<br />
-		<input id='disc4' type='checkbox' value='disc 4 is missing' />disc 4 is missing<br />
-		<input id='disc5' type='checkbox' value='disc 5 is missing' />disc 5 is missing<br />
-		<input id='disc6' type='checkbox' value='disc 6 is missing' />disc 6 is missing<br />
-		<input id='disc7' type='checkbox' value='disc 7 is missing' />disc 7 is missing<br />
-		<input id='disc8' type='checkbox' value='disc 8 is missing' />disc 8 is missing<br />
-		<input id='disc9' type='checkbox' value='disc 9 is missing' />disc 9 is missing<br />
-		<input id='disc10' type='checkbox' value='disc 10 is missing' />disc 10 is missing<br />
+		disc number <input id='discN' type='number' min='4' name='other_disc' /> is missing<br />
 		<input id='several' type='checkbox' value='several discs are missing' />several discs are missing<br />
 		<input id='case_not_epls' type='checkbox' value='case does not belong to EPL' />case doesn't belong to EPL<br />
 		<input id='disc_not_epls' type='checkbox' value='disc does not belong to EPL' />disc doesn't belong to EPL<br />
@@ -108,6 +102,7 @@ if (! $row['count']){
 		<input id='puppet' type='checkbox' value='puppet is missing' />puppet is missing<br />
 		<input id='map' type='checkbox' value='map is missing' />map is missing<br />
 		<input id='pattern' type='checkbox' value='pattern' />pattern is missing<br />
+		Other missing item? <input id='msg' type='textbox' name='other_msg'/><br />
 		";
 	echo "<p>
 	<a id='do_it' href='#' my-action='create' item_id='$item' branch='$branch' 
@@ -208,9 +203,9 @@ $(document).ready(function(){
 		itemId = $(this).attr('item_id');
 		branch = $(this).attr('branch');
 		myAction = $(this).attr('my-action');
-		// $("p#info-dialog").html('heres what I have ' + itemId + ', ' + branch + ', ' + myAction + ', and ' + missingPartsString + '.');
+		$("p#info-dialog").html('heres what I have ' + itemId + ', ' + branch + ', ' + myAction + ', and ' + missingPartsString + '.');
 		// $("p#info-dialog").html('heres what I have.');
-		//confirm('The following pieces are missing: ' + missingPartsString + '. ');
+		// confirm('The following pieces are missing: ' + missingPartsString + '. ');
 		myURL = '';
 		if (missingParts.length > 0) {
 			myURL = myAction + "&item_id=" + itemId + "&branch=" + branch + "&data=" + encodeURIComponent(missingPartsString);
@@ -224,7 +219,13 @@ $(document).ready(function(){
 					$("#info-dialog").text("Error: " + xhr.status + ": " + xhr.statusText);
 		});
     });
-	// Handles clicks from the
+	$('#discN').change(function() {
+		missingPartsString = "disc number " + $('#discN').prop('value') + " is missing"; 
+	});
+	$('#msg').change(function() {
+		missingPartsString = $('#msg').prop('value');
+	});
+	// Handles clicks from the check boxes, adding the correct values to the final message to be added to the email to the customer.
 	$('input').click(function (e) {
 		if ($(this).prop('checked')) {
 			missingParts.push(this.value);
@@ -235,7 +236,6 @@ $(document).ready(function(){
 			}
 		}
 		// Format the string nicely.
-		missingPartsString = '';
 		for (var i = 0; i < missingParts.length -1; i++) {
 			missingPartsString += missingParts[i];
 			missingPartsString += ', '
