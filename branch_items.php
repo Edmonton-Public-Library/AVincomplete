@@ -126,15 +126,17 @@ while ($row = $ret->fetchArray(SQLITE3_ASSOC) ) {
 		</td>\n";
 	if ($row['Contact'] == 1){
 		echo "		<td>
-			<button type='button' class='btn btn-default btn-xs btn-block'>
-			contacted
-			</button>
+			<a my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
+				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
+				contacted
+			</a>
 		</td>\n";
 	} else {
 		echo "		<td>
-			<button type='button' class='btn btn-default btn-xs btn-block'>
-			contacted
-			</button>
+			<a my-action='contact' href='#' item_id='".$itemId."' branch='".$row['Location']."' 
+				class='av-button btn btn-default btn-xs btn-block' data-toggle='modal' data-target='#infoModal'>
+				contacted
+			</a>
 		</td>\n";
 	}
 	if ($row['Complete'] == 1){
