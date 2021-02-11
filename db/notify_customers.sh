@@ -29,74 +29,74 @@
 #
 ####################################################
 source /s/sirsi/Unicorn/EPLwork/cronjobscripts/setscriptenvironment.sh
-HOME=/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete
-if [ ! -e $HOME ]
+WORK_DIR_AN=/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete
+if [ ! -e $WORK_DIR_AN ]
 then
-	echo "**Error: no such directory '$HOME'"
+	echo "**Error: no such directory '$WORK_DIR_AN'"
 	exit 1
 fi
-cd $HOME
-echo `date` >> $HOME/notification.log
+cd $WORK_DIR_AN
+echo `date` >> $WORK_DIR_AN/notification.log
 if [ -s /s/sirsi/Unicorn/Bincustom/mailerbot.pl ]
 then
-	if [ -s $HOME/notice.txt ]
+	if [ -s $WORK_DIR_AN/notice.txt ]
 	then 
-		if [ -s $HOME/customers.lst ]
+		if [ -s $WORK_DIR_AN/customers.lst ]
 		then 
 			echo "== notifying customers of missing components." 
-			echo "== notifying customers of missing components." >> $HOME/notification.log
+			echo "== notifying customers of missing components." >> $WORK_DIR_AN/notification.log
 			echo "reading customer file..."
-			echo "reading customer file..." >> $HOME/notification.log
-			/s/sirsi/Unicorn/Bincustom/mailerbot.pl -c"$HOME/customers.lst" -n"$HOME/notice.txt" >>$HOME/unmailed_customers.lst 2>>$HOME/err.log
+			echo "reading customer file..." >> $WORK_DIR_AN/notification.log
+			/s/sirsi/Unicorn/Bincustom/mailerbot.pl -c"$WORK_DIR_AN/customers.lst" -n"$WORK_DIR_AN/notice.txt" >>$WORK_DIR_AN/unmailed_customers.lst 2>>$WORK_DIR_AN/err.log
 			echo "done."
-			echo "done." >> $HOME/notification.log
+			echo "done." >> $WORK_DIR_AN/notification.log
 			echo "Saving list of mailed customers." 
-			echo "Saving list of mailed customers." >> $HOME/notification.log
-			cat $HOME/customers.lst >>$HOME/notification.log
-			rm $HOME/customers.lst
+			echo "Saving list of mailed customers." >> $WORK_DIR_AN/notification.log
+			cat $WORK_DIR_AN/customers.lst >>$WORK_DIR_AN/notification.log
+			rm $WORK_DIR_AN/customers.lst
 			echo "===="
-			echo "====" >> $HOME/notification.log
+			echo "====" >> $WORK_DIR_AN/notification.log
 		else
 			echo "no customers to notify." 
-			echo "no customers to notify." >> $HOME/notification.log
+			echo "no customers to notify." >> $WORK_DIR_AN/notification.log
 			exit 0
 		fi
 	else
 		echo "** error, notice file is empty or doesn't exist."
-		echo "** error, notice file is empty or doesn't exist.">> $HOME/notification.log 
+		echo "** error, notice file is empty or doesn't exist.">> $WORK_DIR_AN/notification.log 
 		exit 2
 	fi
 	# Now do the completed accounts.
-	if [ -s $HOME/complete_notice.txt ]
+	if [ -s $WORK_DIR_AN/complete_notice.txt ]
 	then 
-		if [ -s $HOME/complete_customers.lst ]
+		if [ -s $WORK_DIR_AN/complete_customers.lst ]
 		then 
 			echo "== notifying customers of completed items." 
-			echo "== notifying customers of completed items." >> $HOME/notification.log
+			echo "== notifying customers of completed items." >> $WORK_DIR_AN/notification.log
 			echo "reading customer complete file..."
-			echo "reading customer complete file..." >> $HOME/notification.log
-			/s/sirsi/Unicorn/Bincustom/mailerbot.pl -c"$HOME/complete_customers.lst" -n"$HOME/complete_notice.txt" >>$HOME/unmailed_customers.lst 2>>$HOME/err.log
+			echo "reading customer complete file..." >> $WORK_DIR_AN/notification.log
+			/s/sirsi/Unicorn/Bincustom/mailerbot.pl -c"$WORK_DIR_AN/complete_customers.lst" -n"$WORK_DIR_AN/complete_notice.txt" >>$WORK_DIR_AN/unmailed_customers.lst 2>>$WORK_DIR_AN/err.log
 			echo "done."
-			echo "done." >> $HOME/notification.log
+			echo "done." >> $WORK_DIR_AN/notification.log
 			echo "Saving list of mailed customers." 
-			echo "Saving list of mailed customers." >> $HOME/notification.log
-			cat $HOME/complete_customers.lst >>$HOME/notification.log
-			rm $HOME/complete_customers.lst
+			echo "Saving list of mailed customers." >> $WORK_DIR_AN/notification.log
+			cat $WORK_DIR_AN/complete_customers.lst >>$WORK_DIR_AN/notification.log
+			rm $WORK_DIR_AN/complete_customers.lst
 			echo "===="
-			echo "====" >> $HOME/notification.log
+			echo "====" >> $WORK_DIR_AN/notification.log
 		else
 			echo "no customers with complete items to notify." 
-			echo "no customers with complete items to notify." >> $HOME/notification.log
+			echo "no customers with complete items to notify." >> $WORK_DIR_AN/notification.log
 			exit 0
 		fi
 	else
 		echo "** error, notice file is empty or doesn't exist."
-		echo "** error, notice file is empty or doesn't exist.">> $HOME/notification.log 
+		echo "** error, notice file is empty or doesn't exist.">> $WORK_DIR_AN/notification.log 
 		exit 2
 	fi
 else
 	echo "**Error: unable to find mailerbot.pl" 
-	echo "**Error: unable to find mailerbot.pl" >>$HOME/notification.log 2>&1
+	echo "**Error: unable to find mailerbot.pl" >>$WORK_DIR_AN/notification.log 2>&1
 	exit 3
 fi
 exit 0
