@@ -27,16 +27,16 @@
 #   0.1 - Scheduled -t to accommodate quicker checkouts for complete material. 
 #
 ####################################################
-HOME=/home/ilsdev/projects/avincomplete/db
-echo `date` >> $HOME/load.log
-if [ -s $HOME/avincomplete.pl ]
+WORK_DIR_AN=/home/ilsdev/projects/avincomplete/db
+echo `date` >> $WORK_DIR_AN/load.log
+if [ -s $WORK_DIR_AN/avincomplete.pl ]
 then
-	cd $HOME
-	echo "== database $HOME/avincomplete.pl -t discharging complete items." >> $HOME/load.log
-	$HOME/avincomplete.pl -t >>$HOME/load.log 2>&1
-	echo "done." >> $HOME/load.log
-	echo "====" >> $HOME/load.log
+	cd $WORK_DIR_AN
+	echo "== database $WORK_DIR_AN/avincomplete.pl -t discharging complete items." >> $WORK_DIR_AN/load.log
+	$WORK_DIR_AN/avincomplete.pl -t >>$WORK_DIR_AN/load.log 2>&1
+	echo "done." >> $WORK_DIR_AN/load.log
+	echo "====" >> $WORK_DIR_AN/load.log
 else
-	echo "**Error: unable to find $HOME/avincomplete.pl" >>$HOME/load.log 2>&1
+	echo "**Error: unable to find $WORK_DIR_AN/avincomplete.pl" >>$WORK_DIR_AN/load.log 2>&1
 fi
 # EOF
