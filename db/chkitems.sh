@@ -5,11 +5,11 @@
 # July 27, 2015
 #
 ###########
-HOME=/home/ilsdev/projects/avincomplete/db
-cd $HOME
+WORK_DIR_AN=/home/ilsdev/projects/avincomplete/db
+cd $WORK_DIR_AN
 if [ ! -s /home/ilsdev/projects/avincomplete/db/$1 ]
 then
-	echo "*** error, expected file name on stdin, or could not find it in $HOME."
+	echo "*** error, expected file name on stdin, or could not find it in $WORK_DIR_AN."
 	exit 1
 fi
 # Explanation:
