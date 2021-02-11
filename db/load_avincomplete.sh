@@ -34,32 +34,32 @@
 #   0.1 - Dev. 
 #
 ####################################################
-HOME=/home/ilsdev/projects/avincomplete/db
-echo `date` >> $HOME/load.log
+WORK_DIR_AN=/home/ilsdev/projects/avincomplete/db
+echo `date` >> $WORK_DIR_AN/load.log
 test=`ps x | grep avincomplete | wc -l`
 k=10
 if [ $(echo " $test > $k" | bc) -eq 1 ]
 then
-	echo "== process busy." >> $HOME/load.log
+	echo "== process busy." >> $WORK_DIR_AN/load.log
 	exit 2
 fi
-if [ -s $HOME/avincomplete.pl ]
+if [ -s $WORK_DIR_AN/avincomplete.pl ]
 then
-	cd $HOME
-	echo "== database $HOME/avincomplete.pl updating AVSNAG cards." >> $HOME/load.log
-	$HOME/avincomplete.pl -c >>$HOME/load.log 2>&1
-	echo "done." >> $HOME/load.log
-	echo "== database $HOME/avincomplete.pl updating items entered by staff." >> $HOME/load.log
-	$HOME/avincomplete.pl -u >>$HOME/load.log 2>&1
-	echo "done." >> $HOME/load.log
-	echo "== database $HOME/avincomplete.pl updating items from AVSNAGS cards." >> $HOME/load.log
-	$HOME/avincomplete.pl -U >>$HOME/load.log 2>&1
-	echo "done." >> $HOME/load.log
-	echo "== database $HOME/avincomplete.pl processing discard items." >> $HOME/load.log
-	$HOME/avincomplete.pl -D >>$HOME/load.log 2>&1
-	echo "done." >> $HOME/load.log
-	echo "====" >> $HOME/load.log
+	cd $WORK_DIR_AN
+	echo "== database $WORK_DIR_AN/avincomplete.pl updating AVSNAG cards." >> $WORK_DIR_AN/load.log
+	$WORK_DIR_AN/avincomplete.pl -c >>$WORK_DIR_AN/load.log 2>&1
+	echo "done." >> $WORK_DIR_AN/load.log
+	echo "== database $WORK_DIR_AN/avincomplete.pl updating items entered by staff." >> $WORK_DIR_AN/load.log
+	$WORK_DIR_AN/avincomplete.pl -u >>$WORK_DIR_AN/load.log 2>&1
+	echo "done." >> $WORK_DIR_AN/load.log
+	echo "== database $WORK_DIR_AN/avincomplete.pl updating items from AVSNAGS cards." >> $WORK_DIR_AN/load.log
+	$WORK_DIR_AN/avincomplete.pl -U >>$WORK_DIR_AN/load.log 2>&1
+	echo "done." >> $WORK_DIR_AN/load.log
+	echo "== database $WORK_DIR_AN/avincomplete.pl processing discard items." >> $WORK_DIR_AN/load.log
+	$WORK_DIR_AN/avincomplete.pl -D >>$WORK_DIR_AN/load.log 2>&1
+	echo "done." >> $WORK_DIR_AN/load.log
+	echo "====" >> $WORK_DIR_AN/load.log
 else
-	echo "**Error: unable to find $HOME/avincomplete.pl" >>$HOME/load.log 2>&1
+	echo "**Error: unable to find $WORK_DIR_AN/avincomplete.pl" >>$WORK_DIR_AN/load.log 2>&1
 fi
 # EOF
