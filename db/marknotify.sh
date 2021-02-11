@@ -29,21 +29,21 @@
 #   0.1 - Scheduled -n mark customers for notification of missing material. 
 #
 ####################################################
-HOME=/home/ilsdev/projects/avincomplete/db
+WORK_DIR_AN=/home/ilsdev/projects/avincomplete/db
 ADDRESSES="andrew.nisbet@epl.ca"
-echo `date` >> $HOME/load.log
-if [ -s $HOME/avincomplete.pl ]
+echo `date` >> $WORK_DIR_AN/load.log
+if [ -s $WORK_DIR_AN/avincomplete.pl ]
 then
-	cd $HOME
-	echo "== database $HOME/avincomplete.pl removing items whose home locations have changed to LOST." >> $HOME/load.log
-	$HOME/avincomplete.pl -l >>$HOME/load.log 2>&1
-	echo "done." >> $HOME/load.log
-	echo "== database $HOME/avincomplete.pl -n making note of customers to notify." >> $HOME/load.log
-	$HOME/avincomplete.pl -n >>$HOME/load.log 2>&1
-	echo "done." >> $HOME/load.log
-	echo "====" >> $HOME/load.log
+	cd $WORK_DIR_AN
+	echo "== database $WORK_DIR_AN/avincomplete.pl removing items whose home locations have changed to LOST." >> $WORK_DIR_AN/load.log
+	$WORK_DIR_AN/avincomplete.pl -l >>$WORK_DIR_AN/load.log 2>&1
+	echo "done." >> $WORK_DIR_AN/load.log
+	echo "== database $WORK_DIR_AN/avincomplete.pl -n making note of customers to notify." >> $WORK_DIR_AN/load.log
+	$WORK_DIR_AN/avincomplete.pl -n >>$WORK_DIR_AN/load.log 2>&1
+	echo "done." >> $WORK_DIR_AN/load.log
+	echo "====" >> $WORK_DIR_AN/load.log
 else
-	echo "**Error: unable to find $HOME/avincomplete.pl" >>$HOME/load.log 2>&1
-	echo "**Error: unable to find $HOME/avincomplete.pl" | mailx -a'From:ilsdev@ilsdev1.epl.ca' -s"AVI report" $ADDRESSES
+	echo "**Error: unable to find $WORK_DIR_AN/avincomplete.pl" >>$WORK_DIR_AN/load.log 2>&1
+	echo "**Error: unable to find $WORK_DIR_AN/avincomplete.pl" | mailx -a'From:ilsdev@ilsdev1.epl.ca' -s"AVI report" $ADDRESSES
 fi
 # EOF
