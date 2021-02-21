@@ -25,7 +25,7 @@
 #      0.0 - Dev. 
 ####################################################
 # Change comment below for appropriate server.
-#SERVER=eplapp.library.ualberta.ca
+#SERVER=edpl.sirsidynix.net
 SERVER=edpl-t.library.ualberta.ca
 USER=sirsi
 REMOTE=~/Unicorn/EPLwork/anisbet/
