@@ -25,9 +25,9 @@
 #      0.0 - Dev. 
 ########################################################################
 # Change comment below for appropriate server.
-PRODUCTION_SERVER=eplapp.library.ualberta.ca
+PRODUCTION_SERVER=edpl.sirsidynix.net
 USER=sirsi
-REMOTE=/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/
+REMOTE=/software/EDPL/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/
 LOCAL=~/projects/avincomplete/db/
 APP=notify_customers.sh
 .PHONY: production
