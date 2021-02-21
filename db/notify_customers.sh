@@ -28,8 +28,8 @@
 #   0.1 - Development. 
 #
 ####################################################
-source /s/sirsi/Unicorn/EPLwork/cronjobscripts/setscriptenvironment.sh
-WORK_DIR_AN=/s/sirsi/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete
+source /software/EDPL/Unicorn/EPLwork/cronjobscripts/setscriptenvironment.sh
+WORK_DIR_AN=/software/EDPL/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete
 if [ ! -e $WORK_DIR_AN ]
 then
 	echo "**Error: no such directory '$WORK_DIR_AN'"
@@ -37,7 +37,7 @@ then
 fi
 cd $WORK_DIR_AN
 echo `date` >> $WORK_DIR_AN/notification.log
-if [ -s /s/sirsi/Unicorn/Bincustom/mailerbot.pl ]
+if [ -s /software/EDPL/Unicorn/Bincustom/mailerbot.pl ]
 then
 	if [ -s $WORK_DIR_AN/notice.txt ]
 	then 
@@ -47,7 +47,7 @@ then
 			echo "== notifying customers of missing components." >> $WORK_DIR_AN/notification.log
 			echo "reading customer file..."
 			echo "reading customer file..." >> $WORK_DIR_AN/notification.log
-			/s/sirsi/Unicorn/Bincustom/mailerbot.pl -c"$WORK_DIR_AN/customers.lst" -n"$WORK_DIR_AN/notice.txt" >>$WORK_DIR_AN/unmailed_customers.lst 2>>$WORK_DIR_AN/err.log
+			/software/EDPL/Unicorn/Bincustom/mailerbot.pl -c"$WORK_DIR_AN/customers.lst" -n"$WORK_DIR_AN/notice.txt" >>$WORK_DIR_AN/unmailed_customers.lst 2>>$WORK_DIR_AN/err.log
 			echo "done."
 			echo "done." >> $WORK_DIR_AN/notification.log
 			echo "Saving list of mailed customers." 
@@ -75,7 +75,7 @@ then
 			echo "== notifying customers of completed items." >> $WORK_DIR_AN/notification.log
 			echo "reading customer complete file..."
 			echo "reading customer complete file..." >> $WORK_DIR_AN/notification.log
-			/s/sirsi/Unicorn/Bincustom/mailerbot.pl -c"$WORK_DIR_AN/complete_customers.lst" -n"$WORK_DIR_AN/complete_notice.txt" >>$WORK_DIR_AN/unmailed_customers.lst 2>>$WORK_DIR_AN/err.log
+			/software/EDPL/Unicorn/Bincustom/mailerbot.pl -c"$WORK_DIR_AN/complete_customers.lst" -n"$WORK_DIR_AN/complete_notice.txt" >>$WORK_DIR_AN/unmailed_customers.lst 2>>$WORK_DIR_AN/err.log
 			echo "done."
 			echo "done." >> $WORK_DIR_AN/notification.log
 			echo "Saving list of mailed customers." 
