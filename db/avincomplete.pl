@@ -24,7 +24,7 @@
 #   b) find the last date
 #
 # Finds and reports last users of AVIncomplete items and prints their addresses.
-#    Copyright (C) 2015-2017  Andrew Nisbet, Edmonton Public Library.
+#    Copyright (C) 2015-2022  Andrew Nisbet, Edmonton Public Library.
 #    Edmonton Public Library acknowledges that it is located on Treaty 6 lands, which are
 #    are home to the Cree, ... First Nations people.
 #
@@ -98,7 +98,9 @@ use vars qw/ %opt /;
 use Getopt::Std;
 use DBI;
 
-my $VERSION                = qq{0.14.03};
+# Renamed variables and file names for completed item customer and incomplete item customers lists
+# in accordance with notify_customers.sh.
+my $VERSION                = qq{0.14.04};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -114,7 +116,8 @@ my @CLEAN_UP_FILE_LIST     = (); # List of file names that will be deleted at th
 my $BINCUSTOM              = "/usr/local/sbin";
 my $PIPE                   = "$BINCUSTOM/pipe.pl";
 my $TEMP_DIR               = "/tmp";
-my $CUSTOMER_COMPLETE_FILE = "complete_customers.lst";
+my $INCOMPLETE_ITEM_CUSTOMERS= "incomplete_item_customers.lst";
+my $COMPLETE_ITEM_CUSTOMERS  = "complete_item_customers.lst";
 my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invalid item ID)";
 my $DISCARD_CARD_ID        = "ILS-DISCARD";
 my $ILS_HOST               = qq{sirsi\@edpl.sirsidynix.net}; # Change this to your site's ILS host name.
@@ -985,7 +988,7 @@ sub init
 			{
 				printf STDERR "Saving customer notification information for complete notification on item '%s'.\n", $itemId;
 				###### Handle notifying users that their items are complete.
-				`echo 'SELECT UserId, Title, ItemId, Location FROM avincomplete WHERE Comments NOT NULL AND UserId NOT NULL AND Complete=1;' | sqlite3 $DB_FILE >>$CUSTOMER_COMPLETE_FILE`;
+				`echo 'SELECT UserId, Title, ItemId, Location FROM avincomplete WHERE Comments NOT NULL AND UserId NOT NULL AND Complete=1;' | sqlite3 $DB_FILE >>$COMPLETE_ITEM_CUSTOMERS`;
 			}
 			print STDERR "discharging $itemId, removing the entry from the database.\n";
 			my $stationLibrary = `echo "select Location from avincomplete where ItemId=$itemId;" | sqlite3 $DB_FILE`;
@@ -1217,34 +1220,33 @@ END_SQL
 	# Notify customers about the missing parts of materials they borrowed.
 	if ( $opt{'n'} )
 	{
-		my $customerFile = "customers.lst";
 		# Select items that were created today. We don't want this back-notifying if something goes wrong. If the mail outage is long some people might
 		# get notices from weeks ago, and there will be a lot of confusion.
-		`echo 'SELECT UserId, Title, Comments, ItemId, Location FROM avincomplete WHERE Comments NOT NULL AND Notified=0 AND UserId NOT NULL AND CreateDate=CURRENT_DATE;' | sqlite3 $DB_FILE >$customerFile`;
+		`echo 'SELECT UserId, Title, Comments, ItemId, Location FROM avincomplete WHERE Comments NOT NULL AND Notified=0 AND UserId NOT NULL AND CreateDate=CURRENT_DATE;' | sqlite3 $DB_FILE >$INCOMPLETE_ITEM_CUSTOMERS`;
 		# produces: 
 		# 21221023803338|The foolish tortoise [sound recording] / written by Richard Buckley ; [illustrated by] Eric Carle|disc is missing
 		# 21221021920217|Yaiba. Ninja gaiden Z [game] / [developed by Comcept, Spark Unlimited]. --|disc is missing
 		# 21221021499063|Glee. The final season [videorecording]|disc 1 is missing
 		# copy list to EPLAPP - empty or not. If empty the list will over-write an existing file which might be old.
 		# Copy the file over to the production machine ready for the next run of mailerbot.
-		`scp $customerFile "$ILS_HOST":$AVI_MAIL_DIR`;
-		print STDERR "file $customerFile copied to application server\n";
+		`scp $INCOMPLETE_ITEM_CUSTOMERS "$ILS_HOST":$AVI_MAIL_DIR`;
+		print STDERR "file $INCOMPLETE_ITEM_CUSTOMERS copied to application server\n";
 		# Set notified date on entry on all notified accounts today. Some may not have been populated with customer data yet if they were just entered
 		# so don't process if user ids are null.
 		`echo 'UPDATE avincomplete SET Notified=1, NoticeDate=CURRENT_DATE WHERE Notified=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE`;
 		print STDERR "notification flag set in database.\n";
 		###### Handle notifying users that their items are complete.
 		# Note: this function used to remove the users that were complete and write them to a log.
-		### The file $CUSTOMER_COMPLETE_FILE is created when -t (mark complete) runs. The file collects 
+		### The file $COMPLETE_ITEM_CUSTOMERS is created when -t (mark complete) runs. The file collects 
 		### is appended to through out the day and if the file exists it is scp'ed to the ILS for mailing 
 		### at night.
-		if ( -s $CUSTOMER_COMPLETE_FILE )
+		if ( -s $COMPLETE_ITEM_CUSTOMERS )
 		{
-			`scp $CUSTOMER_COMPLETE_FILE "$ILS_HOST":$AVI_MAIL_DIR`;
-			printf STDERR "file '%s' copied to application server for e-mailing.\n", $CUSTOMER_COMPLETE_FILE;
+			`scp $COMPLETE_ITEM_CUSTOMERS "$ILS_HOST":$AVI_MAIL_DIR`;
+			printf STDERR "file '%s' copied to application server for e-mailing.\n", $COMPLETE_ITEM_CUSTOMERS;
 			# Remove the list of complete customers.
-			printf STDERR "removing file '%s'.\n", $CUSTOMER_COMPLETE_FILE;
-			unlink $CUSTOMER_COMPLETE_FILE;
+			printf STDERR "removing file '%s'.\n", $COMPLETE_ITEM_CUSTOMERS;
+			unlink $COMPLETE_ITEM_CUSTOMERS;
 		}
 		else
 		{
