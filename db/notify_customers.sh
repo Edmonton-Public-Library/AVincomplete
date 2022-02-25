@@ -102,6 +102,7 @@ logerr()
     exit 1
 }
 
+# TODO: test
 # Diagnostic
 print_vars()
 {
@@ -125,6 +126,7 @@ print_vars()
 	echo "\$UNMAILED_CUSTOMERS=$UNMAILED_CUSTOMERS"
 }
 
+# TODO: test
 ### Check input parameters.
 # $@ is all command line parameters passed to the script.
 # -o is for short options like -v
@@ -140,17 +142,21 @@ eval set -- "$options"
 while true
 do
     case $1 in
+	# TODO: test
     -h|--help)
         usage
         exit 0
         ;;
+	# TODO: test
     -v|--version)
         echo "$APPLICATION_NAME version: $VERSION"
         exit 0
         ;;
+	# TODO: test
 	-V|--VARS)
         print_vars
         ;;
+	# TODO: test
     -x|--xhelp)
         usage
         exit 0
@@ -163,14 +169,17 @@ do
     shift
 done
 
-
+# TODO: test
 [[ -d "$WORK_DIR_AN" ]] || logerr "**error, '$WORK_DIR_AN' is an invalid working directory."
 cd $WORK_DIR_AN
+# TODO: test
 [[ -x "$MAILER" ]] || logerr "**error: unable to use $MAILER"
+# TODO: test
 [[ -s "$INCOMPLETE_NOTICE_TEXT" ]] || logerr "**error, the text file for incomplete item notices ($INCOMPLETE_NOTICE_TEXT) is missing or empty." 
 if [ -s "$INCOMPLETE_ITEM_CUSTOMER_LIST" ]; then
 	logit "== notifying customers of missing components."
 	logit "reading customer file..."
+	# TODO: Change mailerbot to use -h for HTML notices and test.
 	$MAILER -c"$INCOMPLETE_ITEM_CUSTOMER_LIST" -n"$INCOMPLETE_NOTICE_TEXT" >>$UNMAILED_CUSTOMERS 2>>$MAILERBOT_ERROR_LOG
 	logit "done."
 	logit "Saving list of mailed customers."
@@ -184,11 +193,13 @@ fi
 
 # Now do the completed accounts.
 # But stop if the verbage for the notice to customers about completed items is missing or empty.
+# TODO: change to HTML notice verbage.
 [[ -s "$COMPLETE_NOTICE_TEXT" ]] || logerr "**error, the text file for incomplete item notices ($COMPLETE_NOTICE_TEXT) is missing or empty." 
 # Then check if there are customers to notify that their items are complete.
 if [ -s "$COMPLETE_ITEM_CUSTOMER_LIST" ]; then 
 	logit "== notifying customers of completed items." 
-	logit "reading customer complete file..." 
+	logit "reading customer complete file..."
+	# TODO: Change mailerbot to use -h for HTML notices and test.
 	$MAILER -c"$COMPLETE_ITEM_CUSTOMER_LIST" -n"$COMPLETE_NOTICE_TEXT" >>$UNMAILED_CUSTOMERS 2>>$MAILERBOT_ERROR_LOG
 	logit "done." 
 	logit "Saving list of mailed customers." 
