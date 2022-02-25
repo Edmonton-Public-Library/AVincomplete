@@ -40,9 +40,9 @@ COMPLETE_NOTICE_TEXT=$WORK_DIR_AN/complete_item_notice.txt
 # The list of the customer that need to be notified they returned incomplete items.
 # The list is created by avincomplete.pl.
 # TODO: Change this in avincomplete.
-INCOMPLETE_ITEM_CUSTOMER_LIST=$WORK_DIR_AN/incomplete_customers.lst
+INCOMPLETE_ITEM_CUSTOMER_LIST=$WORK_DIR_AN/incomplete_item_customers.lst
 # List of customers that need to be notified their items are now complete.
-COMPLETE_ITEM_CUSTOMER_LIST=WORK_DIR_AN/complete_customers.lst
+COMPLETE_ITEM_CUSTOMER_LIST=WORK_DIR_AN/complete_item_customers.lst
 # Customers that failed to be mailed by mailerbot.
 UNMAILED_CUSTOMERS=$WORK_DIR_AN/unmailed_customers.lst
 
