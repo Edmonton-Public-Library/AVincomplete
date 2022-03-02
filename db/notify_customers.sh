@@ -46,7 +46,7 @@ COMPLETE_ITEM_CUSTOMER_LIST=$WORK_DIR_AN/complete_item_customers.lst
 # Customers that failed to be mailed by mailerbot.
 UNMAILED_CUSTOMERS=$WORK_DIR_AN/unmailed_customers.lst
 
-VERSION="1.00.00_DEV"
+VERSION="1.00.01"
 APPLICATION_NAME=$(basename -s .sh $0)
 ###############################################################################
 # Display usage message.
