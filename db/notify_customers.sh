@@ -30,23 +30,20 @@ WORK_DIR_AN=/software/EDPL/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete
 LOG=$WORK_DIR_AN/notification.log
 
 # Mailerbot specific variables.
-MAILER=/software/EDPL/Unicorn/Bincustom/mailerbot.pl
-MAILERBOT_ERROR_LOG=$WORK_DIR_AN/mailerbot_errors.log
+MAILER=/software/EDPL/Unicorn/Bincustom/mailerbothtml.sh
 
-# The location of the you-returned-something-incomplete notice.
-INCOMPLETE_NOTICE_TEXT=$WORK_DIR_AN/incomplete_item_notice.txt
-# This is the 'thank you' notice template if an item is made complete.
-COMPLETE_NOTICE_TEXT=$WORK_DIR_AN/complete_item_notice.txt
+# The location of the you-returned-something-incomplete HTML notice.
+INCOMPLETE_NOTICE_TEXT=$WORK_DIR_AN/AVIncompleteNotice.html
+# This is the 'thank you' notice template if an item is made complete HTML notice.
+COMPLETE_NOTICE_TEXT=$WORK_DIR_AN/AVIncompleteIsComplete.html
 # The list of the customer that need to be notified they returned incomplete items.
 # The list is created by avincomplete.pl.
 # TODO: Change this in avincomplete.
 INCOMPLETE_ITEM_CUSTOMER_LIST=$WORK_DIR_AN/incomplete_item_customers.lst
 # List of customers that need to be notified their items are now complete.
 COMPLETE_ITEM_CUSTOMER_LIST=$WORK_DIR_AN/complete_item_customers.lst
-# Customers that failed to be mailed by mailerbot.
-UNMAILED_CUSTOMERS=$WORK_DIR_AN/unmailed_customers.lst
 
-VERSION="1.00.01"
+VERSION="2.00.00"
 APPLICATION_NAME=$(basename -s .sh $0)
 ###############################################################################
 # Display usage message.
@@ -111,7 +108,6 @@ print_vars()
 
 	# Mailerbot specific variables.
 	echo "\$MAILER=$MAILER"
-	echo "\$MAILERBOT_ERROR_LOG=$MAILERBOT_ERROR_LOG"
 
 	# The location of the you-returned-something-incomplete notice.
 	echo "\$INCOMPLETE_NOTICE_TEXT=$INCOMPLETE_NOTICE_TEXT"
@@ -122,8 +118,6 @@ print_vars()
 	echo "\$INCOMPLETE_ITEM_CUSTOMER_LIST=$INCOMPLETE_ITEM_CUSTOMER_LIST"
 	# List of customers that need to be notified their items are now complete.
 	echo "\$COMPLETE_ITEM_CUSTOMER_LIST=$COMPLETE_ITEM_CUSTOMER_LIST"
-	# Customers that failed to be mailed by mailerbot.
-	echo "\$UNMAILED_CUSTOMERS=$UNMAILED_CUSTOMERS"
 }
 
 # TODO: test
@@ -178,9 +172,8 @@ cd $WORK_DIR_AN
 [[ -s "$INCOMPLETE_NOTICE_TEXT" ]] || logerr "**error, the text file for incomplete item notices ($INCOMPLETE_NOTICE_TEXT) is missing or empty." 
 if [ -s "$INCOMPLETE_ITEM_CUSTOMER_LIST" ]; then
 	logit "== notifying customers of missing components."
-	logit "reading customer file..."
-	# TODO: Change mailerbot to use -h for HTML notices and test.
-	$MAILER -c"$INCOMPLETE_ITEM_CUSTOMER_LIST" -n"$INCOMPLETE_NOTICE_TEXT" >>$UNMAILED_CUSTOMERS 2>>$MAILERBOT_ERROR_LOG
+	logit "reading incomplete item customers' file and mailing them."
+    $MAILER --log_file=$LOG --customers=$INCOMPLETE_ITEM_CUSTOMER_LIST --template=$INCOMPLETE_NOTICE_TEXT
 	logit "done."
 	logit "Saving list of mailed customers."
 	cat $INCOMPLETE_ITEM_CUSTOMER_LIST >>$LOG
@@ -193,14 +186,12 @@ fi
 
 # Now do the completed accounts.
 # But stop if the verbage for the notice to customers about completed items is missing or empty.
-# TODO: change to HTML notice verbage.
 [[ -s "$COMPLETE_NOTICE_TEXT" ]] || logerr "**error, the text file for incomplete item notices ($COMPLETE_NOTICE_TEXT) is missing or empty." 
 # Then check if there are customers to notify that their items are complete.
 if [ -s "$COMPLETE_ITEM_CUSTOMER_LIST" ]; then 
 	logit "== notifying customers of completed items." 
-	logit "reading customer complete file..."
-	# TODO: Change mailerbot to use -h for HTML notices and test.
-	$MAILER -c"$COMPLETE_ITEM_CUSTOMER_LIST" -n"$COMPLETE_NOTICE_TEXT" >>$UNMAILED_CUSTOMERS 2>>$MAILERBOT_ERROR_LOG
+	logit "reading complete item customers' file and mailing them."
+    $MAILER --log_file=$LOG --customers=$COMPLETE_ITEM_CUSTOMER_LIST --template=$COMPLETE_NOTICE_TEXT
 	logit "done." 
 	logit "Saving list of mailed customers." 
 	cat $COMPLETE_ITEM_CUSTOMER_LIST >>$LOG
