@@ -33,17 +33,20 @@ LOG=$WORK_DIR_AN/notification.log
 MAILER=/software/EDPL/Unicorn/Bincustom/mailerbothtml.sh
 
 # The location of the you-returned-something-incomplete HTML notice.
-INCOMPLETE_NOTICE_TEXT=$WORK_DIR_AN/AVIncompleteNotice.html
+INCOMPLETE_HTML_TEMPLATE=$WORK_DIR_AN/AVIncompleteNotice.html
 # This is the 'thank you' notice template if an item is made complete HTML notice.
-COMPLETE_NOTICE_TEXT=$WORK_DIR_AN/AVIncompleteIsComplete.html
+COMPLETE_HTML_TEMPLATE=$WORK_DIR_AN/AVIncompleteIsComplete.html
 # The list of the customer that need to be notified they returned incomplete items.
 # The list is created by avincomplete.pl.
 # TODO: Change this in avincomplete.
 INCOMPLETE_ITEM_CUSTOMER_LIST=$WORK_DIR_AN/incomplete_item_customers.lst
 # List of customers that need to be notified their items are now complete.
 COMPLETE_ITEM_CUSTOMER_LIST=$WORK_DIR_AN/complete_item_customers.lst
-
-VERSION="2.00.00"
+IS_TEST=false
+TEST_CUSTOMER=21221012345678
+TEST_DATA="21221012345678|Cats / by Jim Pipe|insert / booklet missing|31221096645630|ABB"
+## Added -t test flag.
+VERSION="2.01.01"
 APPLICATION_NAME=$(basename -s .sh $0)
 ###############################################################################
 # Display usage message.
@@ -59,10 +62,14 @@ Usage: $APPLICATION_NAME [-option]
   and if an item previously identified as incomplete has been made
   whole and returned to circulation.
 
-	-h, -help, --help: Outputs this help message.
-	-x, -xhelp, --xhelp: Outputs this help message.
-	-v, -version, --version: Outputs the application version number.
-	-V, -VARS, --VARS: Outputs the variables used by the application.
+ -h, -help, --help: Outputs this help message.
+ -t, -test, --test: Runs in test mode. Only $TEST_CUSTOMER is 
+   processed using fake data: 
+   '$TEST_DATA'
+   and only $TEST_CUSTOMER is emailed.
+ -v, -version, --version: Outputs the application version number.
+ -V, -VARS, --VARS: Outputs the variables used by the application.
+ -x, -xhelp, --xhelp: Outputs this help message.
 
   Version: $VERSION
 EOFU!
@@ -74,13 +81,7 @@ logit()
 {
     local message="$1"
     local time=$(date +"%Y-%m-%d %H:%M:%S")
-    if [ -t 0 ]; then
-        # If run from an interactive shell message STDOUT and LOG.
-        echo -e "[$time] $message" | tee -a $LOG
-    else
-        # If run from cron do write to log.
-        echo -e "[$time] $message" >>$LOG
-    fi
+    echo -e "[$time] $message" | tee -a $LOG
 }
 
 # Logs messages as an error and exits with status code '1'.
@@ -89,17 +90,10 @@ logerr()
 {
     local message="${1} exiting!"
     local time=$(date +"%Y-%m-%d %H:%M:%S")
-    if [ -t 0 ]; then
-        # If run from an interactive shell message STDOUT and LOG.
-        echo -e "[$time] **error: $message" | tee -a $LOG
-    else
-        # If run from cron do write to log.
-        echo -e "[$time] **error: $message" >>$LOG
-    fi
+    echo -e "[$time] **error: $message" | tee -a $LOG
     exit 1
 }
 
-# TODO: test
 # Diagnostic
 print_vars()
 {
@@ -110,24 +104,26 @@ print_vars()
 	echo "\$MAILER=$MAILER"
 
 	# The location of the you-returned-something-incomplete notice.
-	echo "\$INCOMPLETE_NOTICE_TEXT=$INCOMPLETE_NOTICE_TEXT"
+	echo "\$INCOMPLETE_HTML_TEMPLATE=$INCOMPLETE_HTML_TEMPLATE"
 	# This is the 'thank you' notice template if an item is made complete.
-	echo "\$COMPLETE_NOTICE_TEXT=$COMPLETE_NOTICE_TEXT"
+	echo "\$COMPLETE_HTML_TEMPLATE=$COMPLETE_HTML_TEMPLATE"
 	# The list of the customer that need to be notified they returned incomplete items.
 	# The list is created by avincomplete.pl.
 	echo "\$INCOMPLETE_ITEM_CUSTOMER_LIST=$INCOMPLETE_ITEM_CUSTOMER_LIST"
 	# List of customers that need to be notified their items are now complete.
 	echo "\$COMPLETE_ITEM_CUSTOMER_LIST=$COMPLETE_ITEM_CUSTOMER_LIST"
+    echo "\$IS_TEST=$IS_TEST"
+    echo "\$TEST_CUSTOMER=$TEST_CUSTOMER"
+    echo "\$TEST_DATA=$TEST_DATA"
 }
 
-# TODO: test
 ### Check input parameters.
 # $@ is all command line parameters passed to the script.
 # -o is for short options like -v
 # -l is for long options with double dash like --version
 # the comma separates different long options
 # -a is for long options with single dash like -version
-options=$(getopt -l "help,version,VARS,xhelp" -o "hvxV" -a -- "$@")
+options=$(getopt -l "help,test,version,VARS,xhelp" -o "htvxV" -a -- "$@")
 if [ $? != 0 ] ; then echo "Failed to parse options...exiting." >&2 ; exit 1 ; fi
 # set --:
 # If no arguments follow this option, then the positional parameters are unset. Otherwise, the positional parameters
@@ -136,21 +132,22 @@ eval set -- "$options"
 while true
 do
     case $1 in
-	# TODO: test
     -h|--help)
         usage
         exit 0
         ;;
-	# TODO: test
+    -t|--test)
+        # TODO: Implement test mode.
+        logit "testing mode set."
+        IS_TEST=true
+        ;;
     -v|--version)
         echo "$APPLICATION_NAME version: $VERSION"
         exit 0
         ;;
-	# TODO: test
 	-V|--VARS)
         print_vars
         ;;
-	# TODO: test
     -x|--xhelp)
         usage
         exit 0
@@ -168,12 +165,15 @@ done
 cd $WORK_DIR_AN
 # TODO: test
 [[ -x "$MAILER" ]] || logerr "**error: unable to use $MAILER"
-# TODO: test
-[[ -s "$INCOMPLETE_NOTICE_TEXT" ]] || logerr "**error, the text file for incomplete item notices ($INCOMPLETE_NOTICE_TEXT) is missing or empty." 
+if [ "$IS_TEST" == true ]; then
+    echo "$TEST_DATA" >$INCOMPLETE_ITEM_CUSTOMER_LIST
+    echo "$TEST_DATA" >$COMPLETE_ITEM_CUSTOMER_LIST
+fi
+[[ -s "$INCOMPLETE_HTML_TEMPLATE" ]] || logerr "**error, the text file for incomplete item notices ($INCOMPLETE_HTML_TEMPLATE) is missing or empty." 
 if [ -s "$INCOMPLETE_ITEM_CUSTOMER_LIST" ]; then
 	logit "== notifying customers of missing components."
 	logit "reading incomplete item customers' file and mailing them."
-    $MAILER --log_file=$LOG --customers=$INCOMPLETE_ITEM_CUSTOMER_LIST --template=$INCOMPLETE_NOTICE_TEXT
+    $MAILER --log_file=$LOG --customers=$INCOMPLETE_ITEM_CUSTOMER_LIST --template=$INCOMPLETE_HTML_TEMPLATE
 	logit "done."
 	logit "Saving list of mailed customers."
 	cat $INCOMPLETE_ITEM_CUSTOMER_LIST >>$LOG
@@ -186,12 +186,12 @@ fi
 
 # Now do the completed accounts.
 # But stop if the verbage for the notice to customers about completed items is missing or empty.
-[[ -s "$COMPLETE_NOTICE_TEXT" ]] || logerr "**error, the text file for incomplete item notices ($COMPLETE_NOTICE_TEXT) is missing or empty." 
+[[ -s "$COMPLETE_HTML_TEMPLATE" ]] || logerr "**error, the text file for incomplete item notices ($COMPLETE_HTML_TEMPLATE) is missing or empty." 
 # Then check if there are customers to notify that their items are complete.
 if [ -s "$COMPLETE_ITEM_CUSTOMER_LIST" ]; then 
 	logit "== notifying customers of completed items." 
 	logit "reading complete item customers' file and mailing them."
-    $MAILER --log_file=$LOG --customers=$COMPLETE_ITEM_CUSTOMER_LIST --template=$COMPLETE_NOTICE_TEXT
+    $MAILER --log_file=$LOG --customers=$COMPLETE_ITEM_CUSTOMER_LIST --template=$COMPLETE_HTML_TEMPLATE
 	logit "done." 
 	logit "Saving list of mailed customers." 
 	cat $COMPLETE_ITEM_CUSTOMER_LIST >>$LOG
