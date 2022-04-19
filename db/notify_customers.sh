@@ -27,15 +27,16 @@
 ####################################################
 . /software/EDPL/Unicorn/EPLwork/cronjobscripts/setscriptenvironment.sh
 WORK_DIR_AN=/software/EDPL/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete
+NOTICE_DIR=/software/EDPL/Unicorn/Notices
 LOG=$WORK_DIR_AN/notification.log
 
 # Mailerbot specific variables.
 MAILER=/software/EDPL/Unicorn/Bincustom/mailerbothtml.sh
 
 # The location of the you-returned-something-incomplete HTML notice.
-INCOMPLETE_HTML_TEMPLATE=$WORK_DIR_AN/AVIncompleteNotice.html
+INCOMPLETE_HTML_TEMPLATE=$NOTICE_DIR/AVIncompleteNotice.html
 # This is the 'thank you' notice template if an item is made complete HTML notice.
-COMPLETE_HTML_TEMPLATE=$WORK_DIR_AN/AVIncompleteIsComplete.html
+COMPLETE_HTML_TEMPLATE=$NOTICE_DIR/AVIncompleteIsComplete.html
 # The list of the customer that need to be notified they returned incomplete items.
 # The list is created by avincomplete.pl.
 # TODO: Change this in avincomplete.
@@ -46,7 +47,7 @@ IS_TEST=false
 TEST_CUSTOMER=21221012345678
 TEST_DATA="21221012345678|Cats / by Jim Pipe|insert / booklet missing|31221096645630|ABB"
 ## Added -t test flag.
-VERSION="2.01.01"
+VERSION="2.01.02"
 APPLICATION_NAME=$(basename -s .sh $0)
 ###############################################################################
 # Display usage message.
