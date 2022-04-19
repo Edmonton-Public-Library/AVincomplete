@@ -99,6 +99,7 @@ logerr()
 print_vars()
 {
 	echo "\$WORK_DIR_AN=$WORK_DIR_AN"
+    echo "\$NOTICE_DIR=$NOTICE_DIR"
 	echo "\$LOG=$LOG"
 
 	# Mailerbot specific variables.
