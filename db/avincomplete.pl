@@ -988,7 +988,8 @@ sub init
 			{
 				printf STDERR "Saving customer notification information for complete notification on item '%s'.\n", $itemId;
 				###### Handle notifying users that their items are complete.
-				`echo 'SELECT UserId, Title, ItemId, Location FROM avincomplete WHERE Comments NOT NULL AND UserId NOT NULL AND Complete=1;' | sqlite3 $DB_FILE >>$COMPLETE_ITEM_CUSTOMERS`;
+				# Added 'Comments' field to make number of fields match those required by mailerbothtml.sh.
+				`echo 'SELECT UserId, Title, Comments, ItemId, Location FROM avincomplete WHERE Comments NOT NULL AND UserId NOT NULL AND Complete=1;' | sqlite3 $DB_FILE >>$COMPLETE_ITEM_CUSTOMERS`;
 			}
 			print STDERR "discharging $itemId, removing the entry from the database.\n";
 			my $stationLibrary = `echo "select Location from avincomplete where ItemId=$itemId;" | sqlite3 $DB_FILE`;
