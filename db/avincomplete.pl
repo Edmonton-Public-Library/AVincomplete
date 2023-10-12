@@ -100,7 +100,7 @@ use DBI;
 
 # Renamed variables and file names for completed item customer and incomplete item customers lists
 # in accordance with notify_customers.sh.
-my $VERSION                = qq{0.14.04};
+my $VERSION                = qq{0.14.05};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -123,7 +123,7 @@ my $DISCARD_CARD_ID        = "ILS-DISCARD";
 my $ILS_HOST               = qq{sirsi\@edpl.sirsidynix.net}; # Change this to your site's ILS host name.
 # If an item is found in one of these locations, avincomplete will remove it in case the app is not updated.
 my @ITEM_LOCATIONS_OF_INTEREST = ("BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD", "HOLDS");
-my @CUSTOMER_PROFILES      = ("EPL_ADLTNR","EPL_ADULT","EPL_ADU05","EPL_ADU10","EPL_TRAING","EPL_UAL","EPL_LIFE","EPL_ADU01","EPL_SELF","EPL_ADU1FR","EPL_GMU","EPL_LCP","EPL_TADULT","EPL_METRO","EPL_CONCOR","EPL_NORQ","EPL_PRTNR","EPL_ONLIN","EPL_JUVGR","EPL_JUV","EPL_JUVIND","EPL_JUVNR","EPL_JUV05","EPL_JUV10","EPL_JUV01","EPL_SELFJ","EPL_JPRTNR","EPL_JONLIN");
+my @CUSTOMER_PROFILES      = ("EPL_NOVIDG","EPL_JNOVG","EPL_ADLTNR","EPL_ADULT","EPL_ADU05","EPL_ADU10","EPL_TRAING","EPL_UAL","EPL_LIFE","EPL_ADU01","EPL_SELF","EPL_ADU1FR","EPL_GMU","EPL_LCP","EPL_TADULT","EPL_METRO","EPL_CONCOR","EPL_NORQ","EPL_PRTNR","EPL_ONLIN","EPL_JUVGR","EPL_JUV","EPL_JUVIND","EPL_JUVNR","EPL_JUV05","EPL_JUV10","EPL_JUV01","EPL_SELFJ","EPL_JPRTNR","EPL_JONLIN");
 my @SYSTEM_PROFILES        = ("EPL_AVSNAG", "DISCARD"); # Profiles of system cards related to the AVI process.
 my $AVI_MAIL_DIR           = "/software/EDPL/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/";
 my $RECIRCED_MATERIAL_RPT  = "recirced_materials_report.lst";
