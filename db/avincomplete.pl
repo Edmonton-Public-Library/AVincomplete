@@ -922,6 +922,23 @@ sub report_item( $ )
 	printf STDERR "ILS reports: %s\n\n", $ils_results;
 }
 
+# Determine if the item is reported as lost that is it has a LOST bill. 
+# If so it has already been reported as lost
+# and doesn't need to be added to the AVI database.
+# param:  Item Id
+# return: 1 if the item is already reported LOST and 0 otherwise.
+sub itemReportedLost( $ )
+{
+	my $itemId = shift;
+	my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB 2>/dev/null | selbill -iI -oSr 2>/dev/null | pipe.pl -gc1:LOST -oc1`;
+	if ( $ils_results == "LOST" )
+	{
+		print STDERR "rejecting $itemId because it has been reported as LOST already.\n";
+		return 1;
+	}
+	return 0;
+}
+
 # Kicks off the setting of various switches.
 # param:  
 # return: 
@@ -1156,6 +1173,9 @@ sub init
 				$itemId =~ s/(\s+|\|)//g;
 				# speed things up a bit if we ignore the ones we have already processed.
 				next if ( alreadyInDatabase( $itemId ) );
+				# An item with a LOST bill should not be in the AVI database because
+				# the customer has already been charged for the missing item part(s).
+				next if ( itemReportedLost( $itemId ) );
 				# Now we will make an entry for the item im the database, then populate it with title and user data.
 				my $apiUpdate = $itemId . '|(Item process in progress...)|0|0|Unavailable|0|none|';
 				insertNewItem( $apiUpdate, $libCode );
