@@ -51,7 +51,7 @@
 #               'ppm> search DBI; ppm> install DBI'.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
-#          0.14.07 Fixed print statements that should have been printf.
+#          0.14.08 Fixed print statements that should have been printf.
 #
 ##################################################################################################
 
@@ -63,7 +63,7 @@ use DBI;
 
 # Renamed variables and file names for completed item customer and incomplete item customers lists
 # in accordance with notify_customers.sh.
-my $VERSION                = qq{0.14.07};
+my $VERSION                = qq{0.14.08};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
