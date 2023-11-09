@@ -854,7 +854,7 @@ sub removeIncorrectIDs()
 # param:  none.
 # reutrn: list of item IDs that are currently charged to a non-system card, and isn't original user that
 #         originally charged the item.
-sub test_different_user_charged_item_complete()
+sub testDifferentUserChargedItemComplete()
 {
 	my $results = `echo 'SELECT ItemId,UserId FROM avincomplete WHERE Complete=0;' | sqlite3 $DB_FILE`;
 	my $charge_new_users = create_tmp_file( "avi_diff_users_00", $results );
@@ -877,7 +877,7 @@ sub test_different_user_charged_item_complete()
 # Report on items both in AVI and in ILS.
 # param:  Item Id
 # return: none
-sub report_item( $ )
+sub reportItem( $ )
 {
 	my $itemId = shift;
 	my $avi_result = `echo 'SELECT ItemId,UserId,CreateDate,Location,Title,Comments FROM avincomplete WHERE ItemId="$itemId";' | sqlite3 $DB_FILE`;
@@ -1250,7 +1250,7 @@ END_SQL
 		print STDERR "Checking items current location has changed.\n";
 		## Start by marking items that are currently actively charged to another non-system card. 
 		## These can be marked complete since they are circulating with another user.
-		my $results = test_different_user_charged_item_complete();
+		my $results = testDifferentUserChargedItemComplete();
 		my $items_cko_new_users = create_tmp_file( "avi_l_0A", $results );
 		# For each one of these items, we could mark them complete in the database. There is a complete process 
 		# that will remove the holds when the time comes (see '-t'). The next step is to mark them complete in AVI.
@@ -1386,7 +1386,7 @@ END_SQL
 			printf STDERR "** error, %s doesn't look like a valid item ID for EPL.\n", $opt{'s'};
 			exit 2;
 		}
-		report_item( $opt{'s'} );
+		reportItem( $opt{'s'} );
 		exit 0;
 	}
 	if ( $opt{'S'} )
@@ -1399,7 +1399,7 @@ END_SQL
 		open FH, "<$opt{'S'}" or die "*** error, unable to open input file '$opt{'S'}', $!.\n";
 		while( <FH> )
 		{
-			report_item( $_ );
+			reportItem( $_ );
 		}
 		close FH;
 		exit 0;
