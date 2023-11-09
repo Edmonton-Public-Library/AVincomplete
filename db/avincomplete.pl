@@ -51,7 +51,7 @@
 #               'ppm> search DBI; ppm> install DBI'.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
-#          0.14.06 Remove items with LOST bills, and prevent insert of items with LOST bills.
+#          0.14.07 Fixed print statements that should have been printf.
 #
 ##################################################################################################
 
@@ -63,7 +63,7 @@ use DBI;
 
 # Renamed variables and file names for completed item customer and incomplete item customers lists
 # in accordance with notify_customers.sh.
-my $VERSION                = qq{0.14.06};
+my $VERSION                = qq{0.14.07};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -1274,7 +1274,7 @@ END_SQL
 		}
 		close FH;
 		close ITEMS_FILE_HANDLE;
-		print STDERR "removed %d records of items that were cko to other users.\n", ($count + 0);
+		printf STDERR "removed %d records of items that were cko to other users.\n", $count;
 		# The next step would select on non-complete items only.
 		## Process items in the AVI database, remove items that have been marked LOST-ASSUM, etc. See @NON_AVI_LOCATIONS.
 		$results = `echo 'SELECT ItemId FROM avincomplete WHERE Complete=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE`;
@@ -1329,7 +1329,7 @@ END_SQL
 	{
 		if ( ! -e $opt{'r'} )
 		{
-			print STDERR "*** error can't find file '%s'.\n", $opt{'r'};
+			printf STDERR "*** error can't find file '%s'.\n", $opt{'r'};
 			usage();
 		}
 		my $itemFile = $opt{'r'};
@@ -1347,7 +1347,7 @@ END_SQL
 	{
 		if ( ! -e $opt{'R'} )
 		{
-			print STDERR "*** error can't find file '%s'.\n", $opt{'R'};
+			printf STDERR "*** error can't find file '%s'.\n", $opt{'R'};
 			usage();
 		}
 		my $itemFile = $opt{'R'};
