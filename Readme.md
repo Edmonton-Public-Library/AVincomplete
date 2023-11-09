@@ -3,7 +3,7 @@
 
 ## New to This Version
 
-* Items that have LOST bills must necessarily have been attended to by staff and they have decided to charge the customer, so there is no need to store these in AVIncomplete.
+* Items are now checked if they are in locations that indicate staff have remediated them. For example items that have a current location of STOLEN or LOST don't go into AVIncomplete because, well, someone has already made a judgement about what to do with the item.
 
 ## Product Description
 
