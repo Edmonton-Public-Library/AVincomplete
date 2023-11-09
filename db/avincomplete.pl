@@ -895,14 +895,14 @@ sub report_item( $ )
 # for this item.
 # param:  Item Id
 # return: 1 if the item is already reported LOST and 0 otherwise.
-sub staffHasRemediatedItem( $ )
+sub itemHasLostBill( $ )
 {
 	my $itemId = shift;
-	# my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB 2>/dev/null | selbill -iI -oSr 2>/dev/null | "$PIPE" -gc1:LOST -oc1`;
-	my $location = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -om | "$PIPE" -oc0 -tc0`;
-	if ( grep( /($location)/, @LOCATIONS_TO_IGNORE ) )
+	# Make sure items that have a lost bill are not stored in the AVI database.
+	my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB 2>/dev/null | selbill -iI -oSr 2>/dev/null | "$PIPE" -gc1:LOST -oc1`;
+	if ( $ils_results == "LOST" )
 	{
-		print STDERR "$itemId is currently in location $location and doesn't go in AVIncomplete.\n";
+		print STDERR "rejecting $itemId because it has a LOST bill.\n";
 		return 1;
 	}
 	return 0;
@@ -1144,7 +1144,7 @@ sub init
 				next if ( alreadyInDatabase( $itemId ) );
 				# Don't store items that are in ignore-able locations like LOST or STOLEN
 				# These items have already been remediated by staff and don't belong in AVI.
-				next if ( staffHasRemediatedItem( $itemId ) );
+				next if ( itemHasLostBill( $itemId ) );
 				# Now we will make an entry for the item im the database, then populate it with title and user data.
 				my $apiUpdate = $itemId . '|(Item process in progress...)|0|0|Unavailable|0|none|';
 				insertNewItem( $apiUpdate, $libCode );
