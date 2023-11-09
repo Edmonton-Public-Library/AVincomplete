@@ -4,7 +4,7 @@
 # load_avincomplete.sh source file for project avincomplete. 
 #
 # Refreshes data in the AV incomplete database.
-#    Copyright (C) 2015  Andrew Nisbet
+#    Copyright (C) 2015-2023  Andrew Nisbet
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,14 +24,20 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Tue Apr 14 12:20:04 MDT 2015
 # Rev:     
-#   0.1 - Scheduled -t to accommodate quicker checkouts for complete material. 
+#   0.2 - Scheduled -l to remove items that have moved to
+#         an ignore-able location like LOST. 
 #
 ####################################################
+VERSION="0.2"
 WORK_DIR_AN=/home/ilsdev/projects/avincomplete/db
 echo `date` >> $WORK_DIR_AN/load.log
+echo "== Version $VERSION" >> $WORK_DIR_AN/load.log
 if [ -s $WORK_DIR_AN/avincomplete.pl ]
 then
 	cd $WORK_DIR_AN
+	echo "== $WORK_DIR_AN/avincomplete.pl -l removing items that have moved to ignore-able locations like LOST." >> $WORK_DIR_AN/load.log
+	$WORK_DIR_AN/avincomplete.pl -l >>$WORK_DIR_AN/load.log 2>&1
+	echo "done." >> $WORK_DIR_AN/load.log
 	echo "== database $WORK_DIR_AN/avincomplete.pl -t discharging complete items." >> $WORK_DIR_AN/load.log
 	$WORK_DIR_AN/avincomplete.pl -t >>$WORK_DIR_AN/load.log 2>&1
 	echo "done." >> $WORK_DIR_AN/load.log
