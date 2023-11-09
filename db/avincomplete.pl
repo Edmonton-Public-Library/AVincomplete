@@ -1274,7 +1274,7 @@ END_SQL
 		}
 		close FH;
 		close ITEMS_FILE_HANDLE;
-		print STDERR "removed %d records of items that were cko to other users.\n", $count;
+		print STDERR "removed %d records of items that were cko to other users.\n", ($count + 0);
 		# The next step would select on non-complete items only.
 		## Process items in the AVI database, remove items that have been marked LOST-ASSUM, etc. See @NON_AVI_LOCATIONS.
 		$results = `echo 'SELECT ItemId FROM avincomplete WHERE Complete=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE`;
