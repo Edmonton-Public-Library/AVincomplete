@@ -1,6 +1,12 @@
 
-Product Description
--------------------
+# AV Incomplete
+
+## New to This Version
+
+* Items that have LOST bills must necessarily have been attended to by staff and they have decided to charge the customer, so there is no need to store these in AVIncomplete.
+
+## Product Description
+
 Perl script and PHP web site written by Andrew Nisbet for Edmonton Public Library, and is distributable by the enclosed license.
 
 Definition: any audio visual material whose enjoyment is impeded because part of it is missing.
@@ -21,12 +27,12 @@ Case
 * Disc 'n'
 This can also be thought of in terms of an 'active' ingredient, like a DVD disc or a 'inactive' ingredient, like an insert or box.
 
-Background
-----------
+## Background
+
 In 2012, 20,307 items were returned incomplete to EPL branches. Of these items 2,259, valued at $59,575, were discarded as they were not matched up. Handling AV incomplete items is a time consuming process. A one month snapshot (January 25-February 25 2013) shows that EPL spends 150 hours of staff time per month working on AV incomplete items. The cost in both staff time and lost materials thus warranted a review of current AV incomplete procedures.
 
-Proposal
----
+## Proposal
+
 The AV Incomplete Review Team proposes the creation of a web services powered application that staff will use to mark items AV incomplete. Staff would access this application by navigating to a URL, and would then input an item ID for an incomplete item. The script would work in the following way:
 
 If the script detects that this item is already on another branch’s or the same branch’s AV card, an alert is generated telling the staff member to send their piece to the other branch.
@@ -39,8 +45,8 @@ The AV team proposes testing phone calls at 1 or 2 branches for 3 months to dete
 The AV team does not propose billing customers for items returned incomplete due to communication and customer service issues this method would present. If a customer were immediately billed for an incomplete item but returned the other piece to another branch, it would be difficult for staff to know that piece 1 was at branch A and piece 2 at branch B, as there is no “incomplete” status in Workflows. Additionally, some items would be checked in through smart chutes or sorters as the RFID tag was present, but would need to be checked back out or billed by staff. Without communicating to the customer why this is happening, customers may have difficulty interpreting their accounts online, and may have incomplete items marked as claims returned when they tell branch staff that they returned the item in question. Given that only 11% of the total number of AV incomplete items appear not to have been returned in 2012, it is anticipated that the complexity of managing a billing or checkout process would increase the staff time involved in AV incomplete processing while increasing customer confusion and would not significantly increase the amount or value of material returned.
 
 
-Goals and Benefits
----
+## Goals and Benefits
+
 The AV team believes the above approach will confer the following benefits:
 
 The snags/incomplete process would be simplified, thus reducing errors.
@@ -59,23 +65,22 @@ Provides statistics on loss and recovery of borrowed material.
 
 * After 3 months, items would be discarded from the AV incomplete shelves as per current procedures.
 
-avincomplete.pl
----
+## avincomplete.pl
+
 Creates and manages av incomplete sqlite3 database. Note: -c and -d flags rebuild the avsnag cards and discard cards for a branch based on profiles. The branch id must appear as the first 3 letters of its name like: SPW-AVSNAG, or RIV-DISCARD, for a discard card.
 
-Repository Information
-----------------------
-This product is under version control using Git.
-[av incomplete](https://github.com/anisbet/AVincomplete)
+## Repository Information
 
-Dependencies
-------------
-* sqlite3
+This product is under version control using Git at [av incomplete](https://github.com/anisbet/AVincomplete).
+
+## Dependencies
+
+* sqlite3 - Which is available on systems through modern versions of python.
 * [cancelholds.pl](https://github.com/Edmonton-Public-Library/cancelholds)
-* [Pipe.pl](https://github.com/anisbet/pipe)
+* [pipe.pl](https://github.com/anisbet/pipe)
 * [dischargeitem.pl](https://github.com/Edmonton-Public-Library/dischargeitem)
 * [chargeitems.pl](https://github.com/Edmonton-Public-Library/chargeitems)
 
-Known Issues
-------------
+## Known Issues
+
 CSS fixes due.

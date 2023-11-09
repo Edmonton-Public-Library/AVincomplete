@@ -24,7 +24,7 @@
 #   b) find the last date
 #
 # Finds and reports last users of AVIncomplete items and prints their addresses.
-#    Copyright (C) 2015-2022  Andrew Nisbet, Edmonton Public Library.
+#    Copyright (C) 2015-2023  Andrew Nisbet, Edmonton Public Library.
 #    Edmonton Public Library acknowledges that it is located on Treaty 6 lands, which are
 #    are home to the Cree, ... First Nations people.
 #
@@ -45,50 +45,13 @@
 #
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Dependencies: seluser, selitem, selcatalog, selhold, selcharge, chargeitems.pl
-#               createholds.pl, cancelholds.pl, dischargeitem.pl, pipe.pl.
+#               createholds.pl, cancelholds.pl, dischargeitem.pl, pipe.pl, mailerbot.pl
+#               sqlite3, sellbill, and Perl library DBI which can be installed with the
+#               cpan command and 'cpan 1> install DBI', ppm on Windows and then 
+#               'ppm> search DBI; ppm> install DBI'.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
-#          0.14.03 - Remove branch system card holds for items removed from AVI db.
-#          0.14.02 - Fix issue of item in circulation isn't being detectes as such.
-#          0.14.01 - Fix issue of re-appearing discards.
-#          0.14.00 - Added -s and -S.
-#          0.13.04 - Fixed circulation check.
-#          0.13.03 - Fixed error that notified old customers if there was a mail service outage.
-#          0.13.02 - Make item current location check lest strict.
-#          0.13.01 - Add check for item-location change that may indicate the item has been recovered.
-#          0.13.00 - Refactor server variable to make it easier to transplant this process to other libraries.
-#          0.12.01 - Add expiry of 1 year when creating holds.
-#          0.12.00 - Remove DISCARD handling logic, not required, just use a single card.
-#          0.11.00 - Discard to one specific card. No need for branch discard cards.
-#          0.10.00 - Added clean avincomplete shelf list reports.
-#          0.9.01_a - Added BINDERY as ignore location.
-#          0.9.01 - Fix -R to ignore content after the '|' or '\s+'.
-#          0.9.00_a - Add sleep time between dischargeitem and chargeitems to fix non charging to discard bug.
-#          0.9.00 - Email 'item complete' if item is complete and still checked out to customer.
-#                   Clean out records that can't be found in the ILS. This can happen if staff entered
-#                   an ID incorrectly.
-#          0.8.03 - Changed EPL- profiles to EPL_.
-#          0.8.02 - Include ItemId and location in email to customer.
-#          0.8.01 - Remove LOST-ASSUM as a invalid current location. An item can be checked out and LOST-ASSUM. Not the case for LOST though.
-#          0.8.00 - Remove items that have changed current location from CHECKEDOUT, esp. MISSING, LOST, LOST-ASSUM.
-#          0.7.01 - Fix discharge to use station library current default is EPLMNA.
-#          0.7.00 - Add -n to notify customers of missing components.
-#          0.6.04 - Fix to discharge items.
-#          0.6.03 - Discharge item from user charge item to discard.
-#          0.6.02 - Remove holds from branch cards when item marked complete.
-#          0.6.01 - Fixed spelling mistake in usage.
-#          0.6 - Audit items in database and check item out to AVSnag if not checked out.
-#          0.5 - Add test for checkout to anyone and logic to check item out to AVSnag if not checked out.
-#                This will stop reported items from appearing on the PULL hold lists when a copy level hold
-#                is placed.
-#          0.4 - Add -D to discard items marked discard, replaces original use of -D dump to HTML.
-#                and records complete records before removing them.
-#          0.3 - Added -t to discharge items marked complete.
-#          0.2 - Fix to -u titles not updating, items in database not checked
-#                off customers' card. -U and -u refactored. 
-#          0.1 - Dev. 
-#
-# Dependencies: mailbot.pl
+#          0.14.06 Remove items with LOST bills, and prevent insert of items with LOST bills.
 #
 ##################################################################################################
 
@@ -100,7 +63,7 @@ use DBI;
 
 # Renamed variables and file names for completed item customer and incomplete item customers lists
 # in accordance with notify_customers.sh.
-my $VERSION                = qq{0.14.05};
+my $VERSION                = qq{0.14.06};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -122,8 +85,11 @@ my $ITEM_NOT_FOUND         = "(Item not found in ILS, maybe discarded, or invali
 my $DISCARD_CARD_ID        = "ILS-DISCARD";
 my $ILS_HOST               = qq{sirsi\@edpl.sirsidynix.net}; # Change this to your site's ILS host name.
 # If an item is found in one of these locations, avincomplete will remove it in case the app is not updated.
-my @ITEM_LOCATIONS_OF_INTEREST = ("BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD", "HOLDS");
-my @CUSTOMER_PROFILES      = ("EPL_NOVIDG","EPL_JNOVG","EPL_ADLTNR","EPL_ADULT","EPL_ADU05","EPL_ADU10","EPL_TRAING","EPL_UAL","EPL_LIFE","EPL_ADU01","EPL_SELF","EPL_ADU1FR","EPL_GMU","EPL_LCP","EPL_TADULT","EPL_METRO","EPL_CONCOR","EPL_NORQ","EPL_PRTNR","EPL_ONLIN","EPL_JUVGR","EPL_JUV","EPL_JUVIND","EPL_JUVNR","EPL_JUV05","EPL_JUV10","EPL_JUV01","EPL_SELFJ","EPL_JPRTNR","EPL_JONLIN");
+my @LOCATIONS_TO_IGNORE = ("BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD", "HOLDS");
+my @CUSTOMER_PROFILES      = ("EPL_NOVIDG","EPL_JNOVG","EPL_ADLTNR","EPL_ADULT","EPL_ADU05","EPL_ADU10",
+	"EPL_TRAING","EPL_UAL","EPL_LIFE","EPL_ADU01","EPL_SELF","EPL_ADU1FR","EPL_GMU","EPL_LCP","EPL_TADULT",
+	"EPL_METRO","EPL_CONCOR","EPL_NORQ","EPL_PRTNR","EPL_ONLIN","EPL_JUVGR","EPL_JUV","EPL_JUVIND",
+	"EPL_JUVNR","EPL_JUV05","EPL_JUV10","EPL_JUV01","EPL_SELFJ","EPL_JPRTNR","EPL_JONLIN");
 my @SYSTEM_PROFILES        = ("EPL_AVSNAG", "DISCARD"); # Profiles of system cards related to the AVI process.
 my $AVI_MAIL_DIR           = "/software/EDPL/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/";
 my $RECIRCED_MATERIAL_RPT  = "recirced_materials_report.lst";
@@ -186,7 +152,9 @@ sub usage()
 {
     print STDERR << "EOF";
 
-	usage: $0 [-acCdftuUx] [-D<foo.bar>] [-e<days>]
+	usage: $0 [-acCdflntuUx] [-D<foo.bar>] [-e<days>] [-s<item_id>] [-S<item_id_file>]
+	   [-r<reload_item_ids_file>] [-R<remove_item_id_file>]
+
 Creates and manages av incomplete sqlite3 database.
 Note: -c and -d flags rebuild the avsnag cards and discard cards for a branch based on 
 profiles. The branch id must appear as the first 3 letters of its name like: SPW-AVSNAG, or
@@ -214,7 +182,7 @@ RIV-DISCARD, for a discard card.
      use '-e60'.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
  -l: Checks all items in the database to determine if the item has changed current location
-     and if the current location is one of @ITEM_LOCATIONS_OF_INTEREST.  
+     and if the current location is one of @LOCATIONS_TO_IGNORE.  
      If it is it will remove the item from AVIncomplete database and log the transaction to load.log.
  -n: Send out notifications of incomplete materials. Customers with emails will be emailed
      from the production server. This also triggers emails to customers whose items have been
@@ -922,18 +890,19 @@ sub report_item( $ )
 	printf STDERR "ILS reports: %s\n\n", $ils_results;
 }
 
-# Determine if the item is reported as lost that is it has a LOST bill. 
-# If so it has already been reported as lost
-# and doesn't need to be added to the AVI database.
+# Determine if the item is in a ignore-able location like LOST or STOLEN. These
+# locations indicate staff have already decided a different course of action 
+# for this item.
 # param:  Item Id
 # return: 1 if the item is already reported LOST and 0 otherwise.
-sub itemReportedLost( $ )
+sub staffHasRemediatedItem( $ )
 {
 	my $itemId = shift;
-	my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB 2>/dev/null | selbill -iI -oSr 2>/dev/null | pipe.pl -gc1:LOST -oc1`;
-	if ( $ils_results == "LOST" )
+	# my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB 2>/dev/null | selbill -iI -oSr 2>/dev/null | "$PIPE" -gc1:LOST -oc1`;
+	my $location = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -om | "$PIPE" -oc0 -tc0`;
+	if ( grep( /($location)/, @LOCATIONS_TO_IGNORE ) )
 	{
-		print STDERR "rejecting $itemId because it has been reported as LOST already.\n";
+		print STDERR "$itemId is currently in location $location and doesn't go in AVIncomplete.\n";
 		return 1;
 	}
 	return 0;
@@ -1173,9 +1142,9 @@ sub init
 				$itemId =~ s/(\s+|\|)//g;
 				# speed things up a bit if we ignore the ones we have already processed.
 				next if ( alreadyInDatabase( $itemId ) );
-				# An item with a LOST bill should not be in the AVI database because
-				# the customer has already been charged for the missing item part(s).
-				next if ( itemReportedLost( $itemId ) );
+				# Don't store items that are in ignore-able locations like LOST or STOLEN
+				# These items have already been remediated by staff and don't belong in AVI.
+				next if ( staffHasRemediatedItem( $itemId ) );
 				# Now we will make an entry for the item im the database, then populate it with title and user data.
 				my $apiUpdate = $itemId . '|(Item process in progress...)|0|0|Unavailable|0|none|';
 				insertNewItem( $apiUpdate, $libCode );
@@ -1329,7 +1298,7 @@ END_SQL
 			# * Remove if CHECKEDOUT items need to be confirmed as customer (non-system) cards, by profile.
 			# * Remove if not in ILS.
 			# * Remove if DISCARD or STOLEN.
-			if ( grep( /($location)/, @ITEM_LOCATIONS_OF_INTEREST ) )
+			if ( grep( /($location)/, @LOCATIONS_TO_IGNORE ) )
 			{
 				chomp $location;
 				printf STDERR "Removing item '%s' from AVI because current location is '%s'.\n", $itemId, $location;
@@ -1389,7 +1358,7 @@ END_SQL
 		# 31221106184513  Any given Sunday [videorecording] / directed by Oliver Stone
 		# the pipe command will break the file on any space or '|', then output the first column which must be your item id
 		# then output only non-empty rows.
-		my $results = `cat "$itemFile" | pipe.pl -W'(\\s+|\\|)' -oc0 -zc0 -tc0`;
+		my $results = `cat "$itemFile" | "$PIPE" -W'(\\s+|\\|)' -oc0 -zc0 -tc0`;
 		my $rmItemIds = create_tmp_file( "aviincomplete_rm_items", $results );
 		open DATA, "<$rmItemIds" or die "*** error, unable to open input file '$rmItemIds', $!.\n";
 		while (<DATA>)
