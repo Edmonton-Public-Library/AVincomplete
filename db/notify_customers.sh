@@ -4,7 +4,7 @@
 # notify_customers.sh source file for project avincomplete. 
 #
 # Driver to run mailerbot.pl for avincomplete. Intended to be run as cron on EPLAPP.
-#    Copyright (C) 2022  Andrew Nisbet
+#    Copyright (C) 2015-2023  Andrew Nisbet
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
