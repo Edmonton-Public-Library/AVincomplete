@@ -1242,13 +1242,13 @@ END_SQL
 		# Remove items with LOST bills.
 		print STDERR "Checking items for LOST bills.\n";
 		my $results = testForLostBills();
+		my $count = 0;
+		my $total = 0;
 		if ( trim( $results ) )
 		{
 			my $items_with_lost_bills = create_tmp_file( "avi_l_00", $results );
 			open ITEMS_FILE_HANDLE, "<$items_with_lost_bills" or die "*** error, unable to open temp file '$items_with_lost_bills', $!.\n";
 			$results = '';
-			my $count = 0;
-			my $total = 0;
 			while (<ITEMS_FILE_HANDLE>)
 			{
 				my $itemId = $_;
