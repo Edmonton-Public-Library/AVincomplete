@@ -51,7 +51,7 @@
 #               'ppm> search DBI; ppm> install DBI'.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
-#          0.14.08 Fixed print statements that should have been printf.
+#          0.15.00 Fixed print statements that should have been printf.
 #
 ##################################################################################################
 
@@ -63,7 +63,7 @@ use DBI;
 
 # Renamed variables and file names for completed item customer and incomplete item customers lists
 # in accordance with notify_customers.sh.
-my $VERSION                = qq{0.14.08};
+my $VERSION                = qq{0.15.00};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -182,8 +182,8 @@ RIV-DISCARD, for a discard card.
      use '-e60'.
  -f: Force create new database called '$DB_FILE'. **WIPES OUT EXISTING DB**
  -l: Checks all items in the database to determine if the item has changed current location
-     and if the current location is one of @LOCATIONS_TO_IGNORE.  
-     If it is it will remove the item from AVIncomplete database and log the transaction to load.log.
+     and if the current location is one of @LOCATIONS_TO_IGNORE. If it is it will remove the 
+	 item from AVIncomplete database and log the transaction to load.log.
  -n: Send out notifications of incomplete materials. Customers with emails will be emailed
      from the production server. This also triggers emails to customers whose items have been
      marked complete.
@@ -727,14 +727,7 @@ sub alreadyInDatabase( $ )
 	{
 		# All the system messages appear in parenthesis and then the word 'Item', so if we find one
 		# let's try to re check the item in the ILS.
-		if ( $result =~ m/\(Item/ )
-		{
-			return 0; # If the title is a system message, return false so we try to update again.
-		}
-		else
-		{
-			return 1;
-		}
+		return 1 if ( $result !~ m/\(Item/ );
 	}
 	return 0;
 }
@@ -874,6 +867,26 @@ sub testDifferentUserChargedItemComplete()
 	return `cat $diff_non_sys_users | "$PIPE" -oc0 -zc2`;
 }
 
+# Finds all the items in hte database that have bills with bill reason LOST. This is different from LOST
+# location. Many items seem to be in various current locations but if they have a LOST bill the 
+# customer has been charged for losing the item it is no longer an AVI problem.
+sub testForLostBills()
+{
+	my $results   = `echo 'SELECT ItemId FROM avincomplete;' | sqlite3 $DB_FILE`;
+	my $all_items = create_tmp_file( "avi_items_w_bills_00", $results );
+	# 31221113625110
+	# This won't find things where the item isn't charged, or the charge is inactive.
+	$results = `cat $all_items | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB | selbill -iI -oSr 2>/dev/null | "$PIPE" -gc1:LOST -oc0'`;
+	# 31221075400577
+	# 31221075400577
+	# 31221078713059
+	# ...
+	my $all_items_with_bills = create_tmp_file( "avi_items_w_bills_01", $results );
+	# De-dup the list.
+	# 31221075400577
+	return `cat $all_items_with_bills | "$PIPE" -dc0`;
+}
+
 # Report on items both in AVI and in ILS.
 # param:  Item Id
 # return: none
@@ -888,24 +901,6 @@ sub reportItem( $ )
 	my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIBlmyt | selcharge -iI -oUtS | seluser -iU -oSB' 2>/dev/null`;
 	$ils_results = `echo "$ils_results" | "$PIPE" -tc0 -h', ' -H`;
 	printf STDERR "ILS reports: %s\n\n", $ils_results;
-}
-
-# Determine if the item is in a ignore-able location like LOST or STOLEN. These
-# locations indicate staff have already decided a different course of action 
-# for this item.
-# param:  Item Id
-# return: 1 if the item is already reported LOST and 0 otherwise.
-sub itemHasLostBill( $ )
-{
-	my $itemId = shift;
-	# Make sure items that have a lost bill are not stored in the AVI database.
-	my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB 2>/dev/null | selbill -iI -oSr 2>/dev/null | "$PIPE" -gc1:LOST -oc1`;
-	if ( $ils_results == "LOST" )
-	{
-		print STDERR "rejecting $itemId because it has a LOST bill.\n";
-		return 1;
-	}
-	return 0;
 }
 
 # Kicks off the setting of various switches.
@@ -1142,9 +1137,6 @@ sub init
 				$itemId =~ s/(\s+|\|)//g;
 				# speed things up a bit if we ignore the ones we have already processed.
 				next if ( alreadyInDatabase( $itemId ) );
-				# Don't store items that are in ignore-able locations like LOST or STOLEN
-				# These items have already been remediated by staff and don't belong in AVI.
-				next if ( itemHasLostBill( $itemId ) );
 				# Now we will make an entry for the item im the database, then populate it with title and user data.
 				my $apiUpdate = $itemId . '|(Item process in progress...)|0|0|Unavailable|0|none|';
 				insertNewItem( $apiUpdate, $libCode );
@@ -1247,10 +1239,33 @@ END_SQL
 	# Remove items whose current location indicates that the item is no longer an AVI, and AVI may have been missed by staff.
 	if ( $opt{'l'} )
 	{
+		# Remove items with LOST bills.
+		print STDERR "Checking items for LOST bills.\n";
+		my $results = testForLostBills();
+		if ( trim( $results ) )
+		{
+			my $items_with_lost_bills = create_tmp_file( "avi_l_00", $results );
+			open ITEMS_FILE_HANDLE, "<$items_with_lost_bills" or die "*** error, unable to open temp file '$items_with_lost_bills', $!.\n";
+			$results = '';
+			my $count = 0;
+			my $total = 0;
+			while (<ITEMS_FILE_HANDLE>)
+			{
+				my $itemId = $_;
+				$total += 1;
+				print STDERR "$itemId has a LOST bill.\n";
+				# Now remove the item from the database now and cancel the copy hold for the item.
+				$count += removeItemFromAVI( $itemId );
+			}
+			close ITEMS_FILE_HANDLE;
+			printf STDERR "removed %d of %d items that have LOST bills.\n", $count, $total;
+		}
+
+		# Check if items has been charged to another user. 
 		print STDERR "Checking items current location has changed.\n";
-		## Start by marking items that are currently actively charged to another non-system card. 
+		## Mark items that are currently actively charged to another non-system card. 
 		## These can be marked complete since they are circulating with another user.
-		my $results = testDifferentUserChargedItemComplete();
+		$results = testDifferentUserChargedItemComplete();
 		my $items_cko_new_users = create_tmp_file( "avi_l_0A", $results );
 		# For each one of these items, we could mark them complete in the database. There is a complete process 
 		# that will remove the holds when the time comes (see '-t'). The next step is to mark them complete in AVI.
@@ -1259,10 +1274,12 @@ END_SQL
 		open ITEMS_FILE_HANDLE, "<$items_cko_new_users" or die "*** error, unable to open temp file '$items_cko_new_users', $!.\n";
 		open FH, '>>', $RECIRCED_MATERIAL_RPT or die "Could not open file '$RECIRCED_MATERIAL_RPT' $!";
 		$results = '';
-		my $count = 0;
+		$count = 0;
+		$total = 0;
 		while (<ITEMS_FILE_HANDLE>)
 		{
 			my $itemId = $_;
+			$total += 1;
 			print STDERR "$itemId is back in circulation (cko to another user). Marking it complete in the database.\n";
 			`echo 'UPDATE avincomplete SET Complete=1, CompleteDate=CURRENT_DATE WHERE ItemId="$itemId";' | sqlite3 $DB_FILE`;
 			$results = `echo 'SELECT ItemId,Location,Title,CompleteDate,Comments FROM avincomplete WHERE ItemId="$itemId";' | sqlite3 $DB_FILE`;
@@ -1274,7 +1291,8 @@ END_SQL
 		}
 		close FH;
 		close ITEMS_FILE_HANDLE;
-		printf STDERR "removed %d records of items that were cko to other users.\n", $count;
+		printf STDERR "removed %d of %d items selected that were cko to other users.\n", $count, $total;
+
 		# The next step would select on non-complete items only.
 		## Process items in the AVI database, remove items that have been marked LOST-ASSUM, etc. See @NON_AVI_LOCATIONS.
 		$results = `echo 'SELECT ItemId FROM avincomplete WHERE Complete=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE`;
@@ -1286,9 +1304,12 @@ END_SQL
 		# The list is just items that exist and items that locations that are not checked out.
 		open DATA, "<$itemIdFile" or die "*** error, unable to open temp file '$itemIdFile', $!.\n";
 		$results = '';
+		$count   = 0;
+		$total   = 0;
 		while (<DATA>)
 		{
 			my ( $itemId, $location ) = split '\|', $_;
+			$total += 1;
 			# Check locations that indicate that the item has experienced meaningful movement in the ILS
 			# and AVI should clean up its holds.
 			# "BINDERY", "LOST", "LOST-ASSUM", "LOST-CLAIM", "STOLEN", "DISCARD"
@@ -1303,24 +1324,11 @@ END_SQL
 				chomp $location;
 				printf STDERR "Removing item '%s' from AVI because current location is '%s'.\n", $itemId, $location;
 				# Collect all the items for removal below.
-				$results .= "$itemId\n";
+				$count += removeItemFromAVI( $itemId );
 			}
 		}
+		printf STDERR "removed %d of %d selected items that were in a bad place.\n", $count, $total;
 		close DATA;
-		# Remove the items from the database in one shot.
-		if ( $results )
-		{
-			my $databaseItems = create_tmp_file( "avi_l_03", $results );
-			open DATA, "<$databaseItems" or die "*** error, unable to open temp file '$databaseItems', $!.\n";
-			while (<DATA>)
-			{
-				my $itemId = $_;
-				chomp $itemId;
-				cancelHolds( $itemId );
-				removeItemFromAVI( $itemId );
-			}
-			close DATA;
-		}
 		clean_up();
 		exit;
 	}
