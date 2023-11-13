@@ -51,7 +51,7 @@
 #               'ppm> search DBI; ppm> install DBI'.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
-#          0.15.00 Fixed print statements that should have been printf.
+#          0.15.00.test Fixed print statements that should have been printf.
 #
 ##################################################################################################
 
@@ -63,7 +63,7 @@ use DBI;
 
 # Renamed variables and file names for completed item customer and incomplete item customers lists
 # in accordance with notify_customers.sh.
-my $VERSION                = qq{0.15.00};
+my $VERSION                = qq{0.15.00.test};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -1242,6 +1242,7 @@ END_SQL
 		# Remove items with LOST bills.
 		print STDERR "Checking items for LOST bills.\n";
 		my $results = testForLostBills();
+		print "TESTING FOR LOST BILLS ... \n $results";
 		my $count = 0;
 		my $total = 0;
 		if ( trim( $results ) )
@@ -1329,7 +1330,7 @@ END_SQL
 		}
 		printf STDERR "removed %d of %d selected items that were in a bad place.\n", $count, $total;
 		close DATA;
-		clean_up();
+		# clean_up();
 		exit;
 	}
 	# Reload records from log output.
