@@ -51,7 +51,7 @@
 #               'ppm> search DBI; ppm> install DBI'.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
-#          0.15.00.test Fixed print statements that should have been printf.
+#          0.15.01 Fixed print statements that should have been printf.
 #
 ##################################################################################################
 
@@ -63,7 +63,7 @@ use DBI;
 
 # Renamed variables and file names for completed item customer and incomplete item customers lists
 # in accordance with notify_customers.sh.
-my $VERSION                = qq{0.15.00.test};
+my $VERSION                = qq{0.15.01};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -1242,7 +1242,6 @@ END_SQL
 		# Remove items with LOST bills.
 		print STDERR "Checking items for LOST bills.\n";
 		my $results = testForLostBills();
-		print "TESTING FOR LOST BILLS ... \n $results";
 		my $count = 0;
 		my $total = 0;
 		if ( trim( $results ) )
@@ -1259,9 +1258,8 @@ END_SQL
 				$count += removeItemFromAVI( $itemId );
 			}
 			close ITEMS_FILE_HANDLE;
-			printf STDERR "removed %d of %d items that have LOST bills.\n", $count, $total;
 		}
-
+		printf STDERR "removed %d of %d items that have LOST bills.\n", $count, $total;
 		# Check if items has been charged to another user. 
 		print STDERR "Checking items current location has changed.\n";
 		## Mark items that are currently actively charged to another non-system card. 
