@@ -76,8 +76,7 @@ chomp( $DATE );
 my $TIME                   = `date +%H%M%S`;
 chomp $TIME;
 my @CLEAN_UP_FILE_LIST     = (); # List of file names that will be deleted at the end of the script if ! '-t'.
-my $BINCUSTOM              = "/usr/local/sbin";
-my $PIPE                   = "$BINCUSTOM/pipe.pl";
+my $PIPE                   = "/usr/local/sbin/pipe.pl";
 my $TEMP_DIR               = "/tmp";
 my $INCOMPLETE_ITEM_CUSTOMERS= "incomplete_item_customers.lst";
 my $COMPLETE_ITEM_CUSTOMERS  = "complete_item_customers.lst";
@@ -876,7 +875,8 @@ sub testForLostBills()
 	my $all_items = create_tmp_file( "avi_items_w_bills_00", $results );
 	# 31221113625110
 	# This won't find things where the item isn't charged, or the charge is inactive.
-	$results = `cat $all_items | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB | selbill -iI -oSr 2>/dev/null | "$PIPE" -gc1:LOST -oc0'`;
+	### NOTE: Don't use variable $PIPE in the SSH command. The path is not correct for the ILS.
+	$results = `cat $all_items | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB | selbill -iI -oSr 2>/dev/null | pipe.pl -gc1:LOST -oc0'`;
 	# 31221075400577
 	# 31221075400577
 	# 31221078713059
