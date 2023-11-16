@@ -68,6 +68,13 @@ $(document).ready(function(){
 		this.value = '';
 	});
 });
+$('#branch').change(function() {
+    if( $(this).val() == "ALL") {
+        $('#item_id').prop( "disabled", true );
+    } else {       
+        $('#item_id').prop( "disabled", false );
+    }
+});
 </script>
 </body>
 </html>
