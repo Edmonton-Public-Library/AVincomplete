@@ -51,7 +51,7 @@
 #               'ppm> search DBI; ppm> install DBI'.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
-#          0.15.01 Fixed print statements that should have been printf.
+#          0.16.00 Added logit( ).
 #
 ##################################################################################################
 
@@ -63,7 +63,7 @@ use DBI;
 
 # Renamed variables and file names for completed item customer and incomplete item customers lists
 # in accordance with notify_customers.sh.
-my $VERSION                = qq{0.15.01};
+my $VERSION                = qq{0.16.00};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -92,6 +92,17 @@ my @CUSTOMER_PROFILES      = ("EPL_NOVIDG","EPL_JNOVG","EPL_ADLTNR","EPL_ADULT",
 my @SYSTEM_PROFILES        = ("EPL_AVSNAG", "DISCARD"); # Profiles of system cards related to the AVI process.
 my $AVI_MAIL_DIR           = "/software/EDPL/Unicorn/EPLwork/cronjobscripts/Mailerbot/AVIncomplete/";
 my $RECIRCED_MATERIAL_RPT  = "recirced_materials_report.lst";
+
+# Helper function that adds the date and time to logging.
+#   All output is to STDERR.
+# param: string message to be printed to STDERR.
+# return:
+sub logit( $ )
+{
+    chomp(my $dateTime = `date +'%Y-%m-%d %H:%M:%S'`);
+    my $msg = shift;
+    printf STDERR "[$dateTime] %s\n", $msg;
+}
 
 # Writes data to a temp file and returns the name of the file with path.
 # param:  unique name of temp file, like master_list, or 'hold_keys'.
@@ -123,12 +134,12 @@ sub clean_up
 	{
 		if ( -e $file )
 		{
-			printf STDERR "removing '%s'.\n", $file;
+			logit( "removing '$file'." );
 			unlink $file;
 		}
 		else
 		{
-			printf STDERR "** Warning: file '%s' not found.\n", $file;
+			logit( "** Warning: file '$file' not found." );
 		}
 	}
 }
@@ -290,7 +301,7 @@ END_SQL
 	}
 	else
 	{
-		print STDERR "rejecting item '$itemId'\n";
+		logit( "rejecting item '$itemId'" );
 	}
 }
 
@@ -375,7 +386,7 @@ END_SQL
 	}
 	else
 	{
-		print STDERR "rejecting item '$itemId'\n";
+		logit( "rejecting item '$itemId'" );
 	}
 }
 
@@ -409,7 +420,7 @@ sub updateNewItems( $ )
 		$name     = trim( $name );
 		$phone    = trim( $phone );
 		$email    = trim( $email );
-		print STDERR "updating item '$itemId'\n";
+		logit( "updating item '$itemId'" );
 
 		# 31221106301570  |Call of duty|564906|2122102299999|V, Brook|780-451-2345|xxxxxxxx@hotmail.com|
 		# print "$itemId, '$title', $userKey, $userId, '$name', '$phone', '$email'\n";
@@ -421,7 +432,7 @@ END_SQL
 	}
 	else
 	{
-		print STDERR "update rejecting item '$itemId'\n";
+		logit( "update rejecting item '$itemId'" );
 	}
 	$DBH->disconnect;
 }
@@ -541,21 +552,21 @@ sub placeHoldForItem( $ )
 			if ( $branch ne '' )
 			{
 				`echo "$itemId|" | ssh "$ILS_HOST" 'cat - | createholds.pl -l"EPL$branch" -B"$branchCard" -Ue'`;
-				print STDERR "Ok: copy hold place on item '$itemId' for '$branchCard'.\n";
+				logit( "Ok: copy hold place on item '$itemId' for '$branchCard'." );
 			}
 			else # Couldn't find the branch for this avsnag card.
 			{
-				print STDERR "Couldn't find the branch for '$branchCard' for '$itemId'.\n";
+				logit( "Couldn't find the branch for '$branchCard' for '$itemId'." );
 			}
 		}
 		else # Hold already exists on card for identified branch.
 		{
-			print STDERR "'$itemId' already on hold for '$branchCard'.\n";
+			logit( "'$itemId' already on hold for '$branchCard'." );
 		}
 	}
 	else # Branch card not found for requested branch.
 	{
-		print STDERR "* warn: couldn't find a branch card because the branch name was empty on item '$itemId'\n";
+		logit( "* warn: couldn't find a branch card because the branch name was empty on item '$itemId'" );
 	}
 }
 
@@ -579,7 +590,7 @@ sub updateUserInfo( $ )
 	$name     = trim( $name );
 	$phone    = trim( $phone );
 	$email    = trim( $email );
-	print STDERR "updating item '$itemId'\n";
+	logit( "updating item '$itemId'" );
 	# 31221106301570|82765|21221020238199|Sutherland, Buster Brown|780-299-0755||
 	# print "$itemId, $userKey, $userId, '$name', '$phone', '$email'\n";
 	$SQL = <<"END_SQL";
@@ -652,7 +663,7 @@ sub updateCurrentUser( $ )
 	#31221098551174|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
 	chomp( $sqlAPI );
 	$sqlAPI = $itemId . "|" . $sqlAPI;
-	print STDERR "$sqlAPI\n";
+	logit( "$sqlAPI" );
 	updateUserInfo( $sqlAPI );
 }
 
@@ -672,7 +683,7 @@ sub updatePreviousUser( $ )
 	#31221098551174|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
 	chomp( $sqlAPI );
 	$sqlAPI = $itemId . "|" . $sqlAPI;
-	print STDERR "$sqlAPI\n";
+	logit( "$sqlAPI" );
 	updateUserInfo( $sqlAPI );
 }
 
@@ -699,7 +710,7 @@ sub updateTitle( $ )
 	#31221098551174|(Item not found in ILS)|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
 	chomp( $sqlAPI );
 	$sqlAPI = $itemId . "|" . $sqlAPI . "0|0|Unknown|0|none|";
-	print STDERR "$sqlAPI\n";
+	logit( "$sqlAPI" );
 	updateNewItems( $sqlAPI );
 }
 
@@ -769,16 +780,16 @@ sub checkOutItemToAVSnag( $ )
 		if ( $branch ne '' )
 		{
 			`echo "$itemId|" | ssh "$ILS_HOST" 'cat - | chargeitems.pl -b -u"$branchCard" -U'`;
-			print STDERR "Ok: item '$itemId' checked out to '$branchCard'.\n";
+			logit( "Ok: item '$itemId' checked out to '$branchCard'." );
 		}
 		else # Couldn't find the branch for this avsnag card.
 		{
-			print STDERR "Couldn't find the branch for '$branchCard' for '$itemId'.\n";
+			logit( "Couldn't find the branch for '$branchCard' for '$itemId'." );
 		}
 	}
 	else # Branch card not found for requested branch.
 	{
-		print STDERR "* warn: couldn't find a branch card because the branch name was empty on item '$itemId'\n";
+		logit( "* warn: couldn't find a branch card because the branch name was empty on item '$itemId'" );
 	}
 }
 
@@ -794,11 +805,11 @@ sub cancelHolds( $ )
 	while (@cards)
 	{
 		my $branchCard = shift @cards;
-		print STDERR "\n Checking and removing holds for '$branchCard'.\n";
+		logit( "\n Checking and removing holds for '$branchCard'." );
 		# Here we just instruct the script to remove the hold for the item. The script will not remove holds
 		# on items if the user doesn't have a hold.
 		`echo "$itemId|" | ssh "$ILS_HOST" 'cat - | cancelholds.pl -B"$branchCard" -U'`;
-		print STDERR "Ok: any holds for item '$itemId' removed from '$branchCard'.\n";
+		logit( "Ok: any holds for item '$itemId' removed from '$branchCard'." );
 	}
 }
 
@@ -897,10 +908,10 @@ sub reportItem( $ )
 	$avi_result = `echo "$avi_result" | $PIPE -mc4:########################_ -h', ' -oc0,c2,c3,c4,c5,c1 -H`;
 	# 31221216060256|21221025388387|2018-01-09|LHL|Nathan for you. Season one [videorecording]|case missing
 	#            31221216060256, 21221025388387, 2018-01-09, LHL, Nathan for you. Season o, case missing
-	printf STDERR "AVI reports: %s\n", $avi_result;
+	logit( "AVI reports: $avi_result" );
 	my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIBlmyt | selcharge -iI -oUtS | seluser -iU -oSB' 2>/dev/null`;
 	$ils_results = `echo "$ils_results" | "$PIPE" -tc0 -h', ' -H`;
-	printf STDERR "ILS reports: %s\n\n", $ils_results;
+	logit( "ILS reports: $ils_results" );
 }
 
 # Kicks off the setting of various switches.
@@ -915,7 +926,7 @@ sub init
 	# the appropriate branch AV snag card.
 	if ( $opt{'a'} ) 
 	{
-		print STDERR "Checking items in database to ensure they are checked out.\n";
+		logit( "Checking items in database to ensure they are checked out." );
 		my $apiResults = `echo 'SELECT ItemId FROM avincomplete;' | sqlite3 $DB_FILE`;
 		my @data = split '\n', $apiResults;
 		while (@data)
@@ -925,7 +936,7 @@ sub init
 			# Does the item exist on the ils or was it discarded?
 			if ( ! isInILS( $itemId ) )
 			{
-				print STDERR "$itemId not found in ILS.\n";
+				logit( "$itemId not found in ILS." );
 				# Nothing else we can do with this, let's get the next item ID.
 				next;
 			}
@@ -933,7 +944,7 @@ sub init
 			# so item doesn't show up on PULL hold reports, when we place a copy hold for it.
 			if ( ! isCheckedOut( $itemId ) )
 			{
-				print STDERR "checking item out to an AVSNAG card for the current branch.\n";
+				logit( "checking item out to an AVSNAG card for the current branch." );
 				checkOutItemToAVSnag( $itemId );
 			}
 		}
@@ -955,7 +966,7 @@ sub init
 			if ( ! isInILS( $itemId ) )
 			{
 				# We could actually remove the record because if it doesn't exist it's just going to clog things up.
-				print STDERR "$itemId not found in ILS, removing the entry from the database.\n";
+				logit( "$itemId not found in ILS, removing the entry from the database." );
 				`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
 				next;
 			}
@@ -967,12 +978,12 @@ sub init
 			# Check if the item is checked out to a valid customer. Don't email system cards or if the customer doesn't have 
 			if ( isCheckedOutToCustomer( $itemId ) )
 			{
-				printf STDERR "Saving customer notification information for complete notification on item '%s'.\n", $itemId;
+				logit( "Saving customer notification information for complete notification on item '$itemId'" );
 				###### Handle notifying users that their items are complete.
 				# Added 'Comments' field to make number of fields match those required by mailerbothtml.sh.
 				`echo 'SELECT UserId, Title, Comments, ItemId, Location FROM avincomplete WHERE Comments NOT NULL AND UserId NOT NULL AND Complete=1;' | sqlite3 $DB_FILE >>$COMPLETE_ITEM_CUSTOMERS`;
 			}
-			print STDERR "discharging $itemId, removing the entry from the database.\n";
+			logit( "discharging $itemId, removing the entry from the database." );
 			my $stationLibrary = `echo "select Location from avincomplete where ItemId=$itemId;" | sqlite3 $DB_FILE`;
 			chomp $stationLibrary;
 			$stationLibrary = 'EPL' . $stationLibrary;
@@ -999,7 +1010,7 @@ sub init
 			}
 			else
 			{
-				print STDERR "**error: db '$DB_FILE' exists. If you want to overwrite use '-f' flag.\n";
+				logit( "**error: db '$DB_FILE' exists. If you want to overwrite use '-f' flag." );
 			}
 			exit;
 		}
@@ -1008,7 +1019,7 @@ sub init
 		# can cron maintenance.
 		my $mode = 0664;
 		chmod $mode, $DB_FILE;
-		print STDERR "** IMPORTANT **: don't forget to change ownership to www-data or it will remain locked to user edits.\n";
+		logit( "** IMPORTANT **: don't forget to change ownership to www-data or it will remain locked to user edits." );
 		exit;
 	}
 	# Process items marked for discard.
@@ -1028,7 +1039,7 @@ sub init
 			if ( ! isInILS( $itemId ) )
 			{
 				# We could actually remove the record because if it doesn't exist it's just going to clog things up.
-				print STDERR "$itemId not found in ILS, removing the entry from the database.\n";
+				logit( "$itemId not found in ILS, removing the entry from the database." );
 				`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE`;
 				next;
 			}
@@ -1040,13 +1051,13 @@ sub init
 			if ( isCheckedOutToSystemCard( $itemId ) )
 			{
 				# discharge the item, then recharge the item to a branch's discard card.
-				print STDERR "discharging $itemId.\n";
+				logit( "discharging $itemId." );
 				my $stationLibrary = `echo "select Location from avincomplete where ItemId=$itemId;" | sqlite3 $DB_FILE`;
 				chomp $stationLibrary;
 				$stationLibrary = 'EPL' . $stationLibrary;
 				# Add station library to discharge -s"EPLWHP"
 				`echo "$itemId" | ssh "$ILS_HOST" 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
-				print STDERR "charging $itemId, to $branchDiscardCard.\n waiting for dischargeitem.pl to complete.\n";
+				logit( "charging $itemId, to $branchDiscardCard.\n waiting for dischargeitem.pl to complete." );
 				`echo "$itemId" | ssh "$ILS_HOST" 'cat - | chargeitems.pl -b -u"$branchDiscardCard" -U'`;
 			}
 			# and no matter what, record what you are about to remove from AVI.
@@ -1062,7 +1073,7 @@ sub init
 	if ( $opt{'u'} )
 	{
 		# Clean up any items that were not found on the ILS from previous runs -- but log them so staff know what happened.
-		printf STDERR "removing invalid entries and records with typos.\n";
+		logit( "removing invalid entries and records with typos." );
 		removeIncorrectIDs();
 		# Now add the new ones.
 		my $apiResults = `echo 'SELECT ItemId FROM avincomplete WHERE Processed=0;' | sqlite3 $DB_FILE`;
@@ -1074,7 +1085,7 @@ sub init
 			# Does the item exist on the ils or was it discarded?
 			if ( ! isInILS( $itemId ) )
 			{
-				print STDERR "$itemId not found in ILS.\n";
+				logit( "$itemId not found in ILS." );
 				# post that the item is missing 
 				my $apiUpdate = $itemId . "|$ITEM_NOT_FOUND|0|0|Unavailable|0|none|";
 				updateNewItems( $apiUpdate );
@@ -1086,23 +1097,23 @@ sub init
 			# if it's CHECKEDOUT then lets find the user information and update the record.
 			if ( isCheckedOutToCustomer( $itemId ) )
 			{
-				print STDERR "Yep, checked out to customer.\n";
+				logit( "Yep, checked out to customer." );
 				updateCurrentUser( $itemId );
 			}
 			else
 			{
-				print STDERR "Nope not checked, or checked out to a system card.\n";
+				logit( "Nope not checked, or checked out to a system card." );
 				updatePreviousUser( $itemId );
 			}
 			# If the item isn't checked out at all to anyone, then check out to avsnag card 
 			# so item doesn't show up on PULL hold reports, when we place a copy hold for it.
 			if ( ! isCheckedOut( $itemId ) )
 			{
-				print STDERR "checking item out to an AVSNAG card for the current branch.\n";
+				logit( "checking item out to an AVSNAG card for the current branch." );
 				checkOutItemToAVSnag( $itemId );
 			}
 			# Place the item on hold for the av snag card at the correct branch.
-			print STDERR "placing hold for $itemId.\n";
+			logit( "placing hold for $itemId." );
 			placeHoldForItem( $itemId );
 		}
 		clean_up();
@@ -1140,7 +1151,7 @@ sub init
 				# Now we will make an entry for the item im the database, then populate it with title and user data.
 				my $apiUpdate = $itemId . '|(Item process in progress...)|0|0|Unavailable|0|none|';
 				insertNewItem( $apiUpdate, $libCode );
-				print STDERR "inserted: $itemId\n";
+				logit( "inserted: $itemId" );
 				# We can update the title information.
 				updateTitle( $itemId );
 				# We already know that this is a system card so let's get the previous user.
@@ -1212,11 +1223,11 @@ END_SQL
 		# copy list to EPLAPP - empty or not. If empty the list will over-write an existing file which might be old.
 		# Copy the file over to the production machine ready for the next run of mailerbot.
 		`scp $INCOMPLETE_ITEM_CUSTOMERS "$ILS_HOST":$AVI_MAIL_DIR`;
-		print STDERR "file $INCOMPLETE_ITEM_CUSTOMERS copied to application server\n";
+		logit( "file $INCOMPLETE_ITEM_CUSTOMERS copied to application server" );
 		# Set notified date on entry on all notified accounts today. Some may not have been populated with customer data yet if they were just entered
 		# so don't process if user ids are null.
 		`echo 'UPDATE avincomplete SET Notified=1, NoticeDate=CURRENT_DATE WHERE Notified=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE`;
-		print STDERR "notification flag set in database.\n";
+		logit( "notification flag set in database." );
 		###### Handle notifying users that their items are complete.
 		# Note: this function used to remove the users that were complete and write them to a log.
 		### The file $COMPLETE_ITEM_CUSTOMERS is created when -t (mark complete) runs. The file collects 
@@ -1225,14 +1236,14 @@ END_SQL
 		if ( -s $COMPLETE_ITEM_CUSTOMERS )
 		{
 			`scp $COMPLETE_ITEM_CUSTOMERS "$ILS_HOST":$AVI_MAIL_DIR`;
-			printf STDERR "file '%s' copied to application server for e-mailing.\n", $COMPLETE_ITEM_CUSTOMERS;
+			logit( "file '$COMPLETE_ITEM_CUSTOMERS' copied to application server for e-mailing." );
 			# Remove the list of complete customers.
-			printf STDERR "removing file '%s'.\n", $COMPLETE_ITEM_CUSTOMERS;
+			logit( "removing file '$COMPLETE_ITEM_CUSTOMERS'." );
 			unlink $COMPLETE_ITEM_CUSTOMERS;
 		}
 		else
 		{
-			printf STDERR "didn't find any completed items checked out to customers.\n";
+			logit( "didn't find any completed items checked out to customers." );
 		}
 		exit;
 	}
@@ -1240,7 +1251,7 @@ END_SQL
 	if ( $opt{'l'} )
 	{
 		# Remove items with LOST bills.
-		print STDERR "Checking items for LOST bills.\n";
+		logit( "Checking items for LOST bills." );
 		my $results = testForLostBills();
 		my $count = 0;
 		my $total = 0;
@@ -1253,15 +1264,15 @@ END_SQL
 			{
 				my $itemId = $_;
 				$total += 1;
-				print STDERR "$itemId has a LOST bill.\n";
+				logit( "$itemId has a LOST bill." );
 				# Now remove the item from the database now and cancel the copy hold for the item.
 				$count += removeItemFromAVI( $itemId );
 			}
 			close ITEMS_FILE_HANDLE;
 		}
-		printf STDERR "removed %d of %d items that have LOST bills.\n", $count, $total;
+		logit( "removed $count of $total items that have LOST bills." );
 		# Check if items has been charged to another user. 
-		print STDERR "Checking items current location has changed.\n";
+		logit( "Checking items current location has changed." );
 		## Mark items that are currently actively charged to another non-system card. 
 		## These can be marked complete since they are circulating with another user.
 		$results = testDifferentUserChargedItemComplete();
@@ -1279,7 +1290,7 @@ END_SQL
 		{
 			my $itemId = $_;
 			$total += 1;
-			print STDERR "$itemId is back in circulation (cko to another user). Marking it complete in the database.\n";
+			logit( "$itemId is back in circulation (cko to another user). Marking it complete in the database." );
 			`echo 'UPDATE avincomplete SET Complete=1, CompleteDate=CURRENT_DATE WHERE ItemId="$itemId";' | sqlite3 $DB_FILE`;
 			$results = `echo 'SELECT ItemId,Location,Title,CompleteDate,Comments FROM avincomplete WHERE ItemId="$itemId";' | sqlite3 $DB_FILE`;
 			# This could happen if someone reprints a case and re-circs it, then the other branch should discard this material.
@@ -1290,7 +1301,7 @@ END_SQL
 		}
 		close FH;
 		close ITEMS_FILE_HANDLE;
-		printf STDERR "removed %d of %d items selected that were cko to other users.\n", $count, $total;
+		logit( "removed $count of $total items selected that were cko to other users." );
 
 		# The next step would select on non-complete items only.
 		## Process items in the AVI database, remove items that have been marked LOST-ASSUM, etc. See @NON_AVI_LOCATIONS.
@@ -1321,14 +1332,14 @@ END_SQL
 			if ( grep( /($location)/, @LOCATIONS_TO_IGNORE ) )
 			{
 				chomp $location;
-				printf STDERR "Removing item '%s' from AVI because current location is '%s'.\n", $itemId, $location;
+				logit( "Removing item '$itemId' from AVI because current location is '$location'." );
 				# Collect all the items for removal below.
 				$count += removeItemFromAVI( $itemId );
 			}
 		}
-		printf STDERR "removed %d of %d selected items that were in a bad place.\n", $count, $total;
+		logit( "removed $count of $total selected items that were in a bad place." );
 		close DATA;
-		# clean_up();
+		clean_up();
 		exit;
 	}
 	# Reload records from log output.
@@ -1336,7 +1347,7 @@ END_SQL
 	{
 		if ( ! -e $opt{'r'} )
 		{
-			printf STDERR "*** error can't find file '%s'.\n", $opt{'r'};
+			logit( "*** error can't find file $opt{'r'}." );
 			usage();
 		}
 		my $itemFile = $opt{'r'};
@@ -1354,7 +1365,7 @@ END_SQL
 	{
 		if ( ! -e $opt{'R'} )
 		{
-			printf STDERR "*** error can't find file '%s'.\n", $opt{'R'};
+			logit( "*** error can't find file '$opt{'R'}'." );
 			usage();
 		}
 		my $itemFile = $opt{'R'};
@@ -1374,12 +1385,12 @@ END_SQL
 			chomp $itemId;
 			if ( $itemId =~ m/^\d{13,}/ )
 			{
-				printf STDERR "removing '%s'...\n", $itemId;
+				logit( "removing '$itemId'..." );
 				removeItemFromAVI( $itemId );
 			}
 			else
 			{
-				printf STDERR "** warning, ignoring '%s', doesn't look like an item id.\n", $itemId;
+				logit( "** warning, ignoring '$itemId', doesn't look like an item id." );
 			}
 		}
 		close DATA;
@@ -1390,7 +1401,7 @@ END_SQL
 	{
 		if ( $opt{'s'} !~ m/\d{14}/ )
 		{
-			printf STDERR "** error, %s doesn't look like a valid item ID for EPL.\n", $opt{'s'};
+			logit( "** error, $opt{'s'} doesn't look like a valid item ID for EPL." );
 			exit 2;
 		}
 		reportItem( $opt{'s'} );
@@ -1400,7 +1411,7 @@ END_SQL
 	{
 		if ( ! -s $opt{'S'} )
 		{
-			printf STDERR "** error, %s doesn't look like a file of item IDs.\n", $opt{'S'};
+			logit( "** error, $opt{'S'} doesn't look like a file of item IDs." );
 			exit 2;
 		}
 		open FH, "<$opt{'S'}" or die "*** error, unable to open input file '$opt{'S'}', $!.\n";
@@ -1432,12 +1443,12 @@ END_SQL
 			my $branch = $_;
 			chomp $branch;
 			$results = `echo 'SELECT Title, ItemId, CreateDate FROM avincomplete where Location="$branch" and CreateDate < "$dateAgo";' | sqlite3 $DB_FILE`;
-			printf "== Clean AV incomplete shelf list for '%s' ==\n", $branch;
+			logit( "== Clean AV incomplete shelf list for '$branch' ==" );
 			$results = `echo "$results" | "$PIPE" -p'c0:-60 ' | "$PIPE" -h',' -z'c0' -m'c0:\\"##########################################################\\"' `;
 			`echo "Title,Item Id,Date Created" > clean_avi_shelf_"$branch".csv`;
 			`echo "$results" >> clean_avi_shelf_"$branch".csv`;
-			printf $results;
-			printf "== end report ==\n\n", $branch;
+			logit( $results );
+			logit( "== end report for '$branch' ==\n" );
 			# TODO: remove these items from the avi database(?) suggest and see what staff and management want.
 		}
 		close BRANCH_NAME_FILE;
