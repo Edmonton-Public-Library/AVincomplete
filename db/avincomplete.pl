@@ -51,7 +51,7 @@
 #               'ppm> search DBI; ppm> install DBI'.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
-#          0.16.02 Sent spurious STDERR from tools to /dev/null.
+#          0.16.03 Add logging of each switch.
 #
 ##################################################################################################
 
@@ -63,7 +63,7 @@ use DBI;
 
 # Renamed variables and file names for completed item customer and incomplete item customers lists
 # in accordance with notify_customers.sh.
-my $VERSION                = qq{0.16.02};
+my $VERSION                = qq{0.16.03};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -960,6 +960,7 @@ sub init
 				checkOutItemToAVSnag( $itemId );
 			}
 		}
+		logit("done.");
 	}
 	# This looks for items that are marked complete and discharges them from the card they are checked out to.
 	# Note: this function used to remove the users that were complete and write them to a log. We now want to
@@ -967,6 +968,7 @@ sub init
 	# flag below.
 	if ( $opt{'t'} ) 
 	{
+		logit("removing completed items.");
 		# Find all the items marked complete.
 		my $selectCompleteItems = `echo 'SELECT ItemId FROM avincomplete WHERE Complete=1;' | sqlite3 $DB_FILE`;
 		my @data = split '\n', $selectCompleteItems;
@@ -1005,11 +1007,13 @@ sub init
 			## remove from the av incomplete database.
 			`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
 		}
+		logit("done.");
 		exit;
 	}
 	# Create new sqlite database.
 	if ( $opt{'C'} ) 
 	{
+		logit("creating new avincomplete database.");
 		if ( -e $DB_FILE )
 		{
 			if ( $opt{'f'} )
@@ -1032,11 +1036,13 @@ sub init
 		my $mode = 0664;
 		chmod $mode, $DB_FILE;
 		logit( "** IMPORTANT **: don't forget to change ownership to www-data or it will remain locked to user edits." );
+		logit("done.");
 		exit;
 	}
 	# Process items marked for discard.
 	if ( $opt{'D'} ) 
 	{
+		logit("processing items for discard.");
 		# Here we take the items that are marked discarded if so and the item is on a system card,
 		# it is ok to discharge it and charge it to a discard card. However, it is not ok to discharge 
 		# from a customer card, because the ILS will remove any LOST bill and replace it with overdues.
@@ -1077,6 +1083,7 @@ sub init
 			# remove from the av incomplete database.
 			`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE`;
 		}
+		logit("done.");
 		exit;
 	}
 	# Update database from items entered into the local database by the web site.
@@ -1129,11 +1136,13 @@ sub init
 			placeHoldForItem( $itemId );
 		}
 		clean_up();
+		logit("done.");
 		exit;
 	} # End of '-u' switch handling.
 	# Update database from AVSNAG profile cards, inserts new records or ignores if it's already there.
 	if ( $opt{'U'} )
 	{
+		logit("updating database will new items from avsnag cards.");
 		# Find all the AV Snag cards in the system, then iterate over them to find all the items charged.
 		my $selectSnagCards = `ssh "$ILS_HOST" 'seluser -p"EPL_AVSNAG" -oUB 2>/dev/null' 2>/dev/null`;
 		# Looks like: '604887|WMC-AVINCOMPLETE|'
@@ -1174,11 +1183,13 @@ sub init
 				placeHoldForItem( $itemId );
 			} # end while
 		} # end of while system card iteration.
+		logit("done.");
 		exit; # End of '-U' switch handling.
 	} 
-	# Create table of system cards for holds and checkouts.
+	# Update table of system cards for holds and checkouts.
 	if ( $opt{'c'} ) 
 	{
+		logit("updating system cards.");
 		my $apiResults = `ssh "$ILS_HOST" 'seluser -p"EPL_AVSNAG" -oUB 2>/dev/null' 2>/dev/null`;
 		# which produces:
 		# ...
@@ -1217,6 +1228,7 @@ END_SQL
 			$DBH->do($SQL, undef, $userKey, $userId, $branch );
 		}
 		$DBH->disconnect();
+		logit("finished updating avsnag cards table.");
 	} # end of if '-c' processing.
 	# Set the default discard system card.
 	if ( $opt{'d'} ) 
@@ -1227,6 +1239,7 @@ END_SQL
 	# Notify customers about the missing parts of materials they borrowed.
 	if ( $opt{'n'} )
 	{
+		logit("compiling list of customers to notify about missing materials.");
 		# Select items that were created today. We don't want this back-notifying if something goes wrong. If the mail outage is long some people might
 		# get notices from weeks ago, and there will be a lot of confusion.
 		`echo 'SELECT UserId, Title, Comments, ItemId, Location FROM avincomplete WHERE Comments NOT NULL AND Notified=0 AND UserId NOT NULL AND CreateDate=CURRENT_DATE;' | sqlite3 $DB_FILE >$INCOMPLETE_ITEM_CUSTOMERS`;
@@ -1259,6 +1272,7 @@ END_SQL
 		{
 			logit( "didn't find any completed items checked out to customers." );
 		}
+		logit("done.");
 		exit;
 	}
 	# Remove items whose current location indicates that the item is no longer an AVI, and AVI may have been missed by staff.
@@ -1359,6 +1373,7 @@ END_SQL
 	# Reload records from log output.
 	if ( $opt{'r'} )
 	{
+		logit("reloading records from $opt{'r'}.");
 		if ( ! -e $opt{'r'} )
 		{
 			logit( "*** error can't find file $opt{'r'}." );
@@ -1372,11 +1387,13 @@ END_SQL
 			insertRemovedItem( "$_" );
 		}
 		close DATA;
+		logit("done.");
 		exit 0;
 	}
 	# Remove Item ids listed in a file.
 	if ( $opt{'R'} )
 	{
+		logit("removing items from $opt{'R'}.");
 		if ( ! -e $opt{'R'} )
 		{
 			logit( "*** error can't find file '$opt{'R'}'." );
@@ -1409,10 +1426,12 @@ END_SQL
 		}
 		close DATA;
 		clean_up();
+		logit("done.");
 		exit 0;
 	}
 	if ( $opt{'s'} )
 	{
+		logit("checking status of $opt{'s'}.");
 		if ( $opt{'s'} !~ m/\d{14}/ )
 		{
 			logit( "** error, $opt{'s'} doesn't look like a valid item ID for EPL." );
@@ -1423,6 +1442,7 @@ END_SQL
 	}
 	if ( $opt{'S'} )
 	{
+		logit("checking statuses of items listed in $opt{'S'}.");
 		if ( ! -s $opt{'S'} )
 		{
 			logit( "** error, $opt{'S'} doesn't look like a file of item IDs." );
@@ -1439,6 +1459,7 @@ END_SQL
 	# Produce clean av incomplete shelf list.
 	if ( $opt{'e'} )
 	{
+		logit("compiling clean AVIncomplete shelf list.");
 		my $daysAgo = $opt{'e'};
 		my $dateAgo = '';
 		# Get a list of branches.
