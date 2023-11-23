@@ -23,6 +23,7 @@
 #
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Tue Apr 14 12:20:04 MDT 2015
+# Rev:     0.1 Fixed some recommendations from ShellCheck.
 #
 ####################################################
 . /software/EDPL/Unicorn/EPLwork/cronjobscripts/setscriptenvironment.sh
@@ -162,9 +163,7 @@ do
     shift
 done
 
-# TODO: test
-[[ -d "$WORK_DIR_AN" ]] || logerr "**error, '$WORK_DIR_AN' is an invalid working directory."
-cd $WORK_DIR_AN
+cd $WORK_DIR_AN || { echo "**error, can't cd into $WORK_DIR_AN"; exit 1; }
 # TODO: test
 [[ -x "$MAILER" ]] || logerr "**error: unable to use $MAILER"
 if [ "$IS_TEST" == true ]; then

@@ -51,7 +51,7 @@
 #               'ppm> search DBI; ppm> install DBI'.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
-#          0.16.00 Added logit( ).
+#          0.16.01 Added check for unpaid lost bills.
 #
 ##################################################################################################
 
@@ -63,7 +63,7 @@ use DBI;
 
 # Renamed variables and file names for completed item customer and incomplete item customers lists
 # in accordance with notify_customers.sh.
-my $VERSION                = qq{0.16.00};
+my $VERSION                = qq{0.16.01};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -150,6 +150,7 @@ sub clean_up
 sub trim( $ )
 {
 	my $string = shift;
+	return '' if (! $string);
 	$string =~ s/^\s+//;
 	$string =~ s/\s+$//;
 	return $string;
@@ -208,8 +209,8 @@ RIV-DISCARD, for a discard card.
  -u: Removes incorrect item ids from the local database, that is items that couldn't be found in the ILS.
      Updates database based on items entered by staff on the web site. Safe to do anytime. 
  -U: Updates database based on items on cards with $AVSNAG profile. Safe to run anytime,
-     but should be run with a frequency that is inversely proportional to the amount of
-     time staff are servicing AV incomplete.
+     but should be run with a frequency that is proportional to the amount of time staff spend 
+	 on AV incomplete.
  -x: This (help) message.
 
 example: 
@@ -877,25 +878,36 @@ sub testDifferentUserChargedItemComplete()
 	return `cat $diff_non_sys_users | "$PIPE" -oc0 -zc2`;
 }
 
-# Finds all the items in hte database that have bills with bill reason LOST. This is different from LOST
-# location. Many items seem to be in various current locations but if they have a LOST bill the 
-# customer has been charged for losing the item it is no longer an AVI problem.
+# Finds all the items in hte database that have bills with bill reason LOST and paid in full = 'N'. 
+# This is different from LOST location. Many items seem to be in various current locations but if 
+# they have a LOST bill the customer has been charged for losing the item it is no longer an AVI problem.
 sub testForLostBills()
 {
 	my $results   = `echo 'SELECT ItemId FROM avincomplete;' | sqlite3 $DB_FILE`;
 	my $all_items = create_tmp_file( "avi_items_w_bills_00", $results );
 	# 31221113625110
-	# This won't find things where the item isn't charged, or the charge is inactive.
+	# Find items with bill reason LOST and paid in full = 'N'.
 	### NOTE: Don't use variable $PIPE in the SSH command. The path is not correct for the ILS.
-	$results = `cat $all_items | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB | selbill -iI -oSr 2>/dev/null | pipe.pl -gc1:LOST -oc0'`;
-	# 31221075400577
-	# 31221075400577
+	$results = `cat $all_items | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB 2>/dev/null | selbill -iI -oSrp 2>/dev/null | pipe.pl -gc1:LOST,c2:N -oc0'`;
+	# 31221075400577 iif the item has a LOST bill that is unpaid.
+	# 31221075400577 but can be duplicated as it turns out.
 	# 31221078713059
 	# ...
 	my $all_items_with_bills = create_tmp_file( "avi_items_w_bills_01", $results );
 	# De-dup the list.
 	# 31221075400577
 	return `cat $all_items_with_bills | "$PIPE" -dc0`;
+}
+
+# Checks if an argument item has unpaid lost bills.
+# Uses selbill -Srp where r is bill reason, and p is paid in full. If r == 'LOST' and p == 'N' returns the barcode, otherwise nothing.
+# param: item barcode.
+# return: item barcode if there is an unpaid LOST bill, otherwise nothing.
+sub hasUnpaidLostBill( $ )
+{
+	my $item = shift;
+	# selbill -Srp where r is bill reason, and p is paid in full. If r == 'LOST' and p == 'N' returns the barcode, otherwise nothing.
+	return `echo $item | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB 2>/dev/null | selbill -iI -oSrp 2>/dev/null | pipe.pl -gc1:LOST,c2:N -oc0'`;
 }
 
 # Report on items both in AVI and in ILS.
@@ -1148,6 +1160,8 @@ sub init
 				$itemId =~ s/(\s+|\|)//g;
 				# speed things up a bit if we ignore the ones we have already processed.
 				next if ( alreadyInDatabase( $itemId ) );
+				# Check for unpaid LOST bills, and don't add it if it does.
+				next if ( hasUnpaidLostBill( $itemId) );
 				# Now we will make an entry for the item im the database, then populate it with title and user data.
 				my $apiUpdate = $itemId . '|(Item process in progress...)|0|0|Unavailable|0|none|';
 				insertNewItem( $apiUpdate, $libCode );
@@ -1250,7 +1264,7 @@ END_SQL
 	# Remove items whose current location indicates that the item is no longer an AVI, and AVI may have been missed by staff.
 	if ( $opt{'l'} )
 	{
-		# Remove items with LOST bills.
+		# Remove items with unpaid LOST bills.
 		logit( "Checking items for LOST bills." );
 		my $results = testForLostBills();
 		my $count = 0;
@@ -1264,7 +1278,7 @@ END_SQL
 			{
 				my $itemId = $_;
 				$total += 1;
-				logit( "$itemId has a LOST bill." );
+				logit( "$itemId has an unpaid LOST bill." );
 				# Now remove the item from the database now and cancel the copy hold for the item.
 				$count += removeItemFromAVI( $itemId );
 			}
