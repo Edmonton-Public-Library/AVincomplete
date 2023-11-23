@@ -26,15 +26,14 @@
 #
 #################################################################
 WORK_DIR=/home/ilsdev/projects/avincomplete/db
-APP=$(basename -s .sh "$0")
-LOG="$WORK_DIR/$APP.log"
+LOG="$WORK_DIR/load_avincomplete.log"
 if [ ! -f "$LOG" ]; then
   echo "log $LOG file not found"
   exit 1
 fi
 timestamp=$(date +%Y%m%d)
 # backup database and complete.log
-tar cvfz "avincomplete.$timestamp.tgz" avincomplete.db marknotify.log notification.log load_avincomplete.log "$LOG"
+tar cvfz "avincomplete.$timestamp.tgz" avincomplete.db marknotify.log notification.log "$LOG"
 echo > "$LOG"
 ### Keep the number of old log files down to 10.
 if [ -s "avincomplete.$timestamp.tgz" ]
