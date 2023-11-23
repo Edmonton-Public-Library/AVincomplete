@@ -888,7 +888,7 @@ sub testForLostBills()
 	# 31221113625110
 	# Find items with bill reason LOST and paid in full = 'N'.
 	### NOTE: Don't use variable $PIPE in the SSH command. The path is not correct for the ILS.
-	$results = `cat $all_items | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB 2>/dev/null | selbill -iI -oSrp 2>/dev/null | pipe.pl -gc1:LOST,c2:N -oc0'`;
+	$results = `cat $all_items | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB 2>/dev/null | selbill -iI -oSrp 2>/dev/null | pipe.pl -gc1:LOST,c2:N -oc0' 2>/dev/null`;
 	# 31221075400577 iif the item has a LOST bill that is unpaid.
 	# 31221075400577 but can be duplicated as it turns out.
 	# 31221078713059
@@ -907,7 +907,7 @@ sub hasUnpaidLostBill( $ )
 {
 	my $item = shift;
 	# selbill -Srp where r is bill reason, and p is paid in full. If r == 'LOST' and p == 'N' returns the barcode, otherwise nothing.
-	return `echo $item | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB 2>/dev/null | selbill -iI -oSrp 2>/dev/null | pipe.pl -gc1:LOST,c2:N -oc0'`;
+	return `echo $item | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIB 2>/dev/null | selbill -iI -oSrp 2>/dev/null | pipe.pl -gc1:LOST,c2:N -oc0' 2>/dev/null`;
 }
 
 # Report on items both in AVI and in ILS.
@@ -1002,7 +1002,7 @@ sub init
 			chomp $stationLibrary;
 			$stationLibrary = 'EPL' . $stationLibrary;
 			# Add station library to discharge -s"EPLWHP"
-			`echo "$itemId" | ssh "$ILS_HOST" 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
+			`echo "$itemId" | ssh "$ILS_HOST" 'cat - | dischargeitem.pl -U -s"$stationLibrary"' 2>/dev/null`;
 			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE >>complete.log 2>&1`;
 			## remove from the av incomplete database.
 			`echo 'DELETE FROM avincomplete WHERE ItemId=$itemId AND Complete=1;' | sqlite3 $DB_FILE`;
