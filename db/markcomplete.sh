@@ -24,25 +24,26 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Created: Tue Apr 14 12:20:04 MDT 2015
 # Rev:     
-#   0.2 - Scheduled -l to remove items that have moved to
-#         an ignore-able location like LOST. 
+#   0.3 Implemented changes recommended by ShellCheck. 
 #
 ####################################################
-VERSION="0.2"
+VERSION="0.3"
 WORK_DIR_AN=/home/ilsdev/projects/avincomplete/db
-echo `date` >> $WORK_DIR_AN/load.log
-echo "== Version $VERSION" >> $WORK_DIR_AN/load.log
+APP=$(basename -s .sh "$0")
+LOG="$WORK_DIR_AN/$APP.log"
+"$(date)" >> "$LOG"
+echo "== Version $VERSION" >> "$LOG"
 if [ -s $WORK_DIR_AN/avincomplete.pl ]
 then
-	cd $WORK_DIR_AN
-	echo "== $WORK_DIR_AN/avincomplete.pl -l removing items that have moved to ignore-able locations like LOST." >> $WORK_DIR_AN/load.log
-	$WORK_DIR_AN/avincomplete.pl -l >>$WORK_DIR_AN/load.log 2>&1
-	echo "done." >> $WORK_DIR_AN/load.log
-	echo "== database $WORK_DIR_AN/avincomplete.pl -t discharging complete items." >> $WORK_DIR_AN/load.log
-	$WORK_DIR_AN/avincomplete.pl -t >>$WORK_DIR_AN/load.log 2>&1
-	echo "done." >> $WORK_DIR_AN/load.log
-	echo "====" >> $WORK_DIR_AN/load.log
+	cd $WORK_DIR_AN || { echo "**Error unable to change into $WORK_DIR_AN"; exit 1; }
+	{ echo "== $WORK_DIR_AN/avincomplete.pl -l removing items that have moved to ignore-able locations like LOST.";
+	$WORK_DIR_AN/avincomplete.pl -l;
+	echo "done.";
+	echo "== database $WORK_DIR_AN/avincomplete.pl -t discharging complete items.";
+	$WORK_DIR_AN/avincomplete.pl -t;
+	echo "done.";
+	echo "===="; } >> "$LOG" 2>&1
 else
-	echo "**Error: unable to find $WORK_DIR_AN/avincomplete.pl" >>$WORK_DIR_AN/load.log 2>&1
+	echo "**Error: unable to find $WORK_DIR_AN/avincomplete.pl" >>"$LOG" 2>&1
 fi
 # EOF
