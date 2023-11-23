@@ -31,7 +31,7 @@ VERSION="0.3"
 WORK_DIR_AN=/home/ilsdev/projects/avincomplete/db
 APP=$(basename -s .sh "$0")
 LOG="$WORK_DIR_AN/$APP.log"
-"$(date)" >> "$LOG"
+echo "$(date)" >> "$LOG"
 echo "== Version $VERSION" >> "$LOG"
 if [ -s $WORK_DIR_AN/avincomplete.pl ]
 then

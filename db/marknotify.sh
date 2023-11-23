@@ -31,7 +31,7 @@ WORK_DIR_AN=/home/ilsdev/projects/avincomplete/db
 ADDRESSES="andrew.nisbet@epl.ca"
 APP=$(basename -s .sh "$0")
 LOG="$WORK_DIR_AN/$APP.log"
-"$(date)" >> "$LOG"
+echo "$(date)" >> "$LOG"
 if [ -s $WORK_DIR_AN/avincomplete.pl ]
 then
 	cd $WORK_DIR_AN || { echo "**Error unable to change into $WORK_DIR_AN"; exit 1; }

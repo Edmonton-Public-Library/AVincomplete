@@ -30,7 +30,7 @@
 WORK_DIR_AN=/home/ilsdev/projects/avincomplete/db
 APP=$(basename -s .sh "$0")
 LOG="$WORK_DIR_AN/$APP.log"
-"$(date)" >> "$LOG"
+echo "$(date)" >> "$LOG"
 test=$(pgrep --count avincomplete)
 k=10
 if [ "$(echo " $test > $k" | bc)" -eq 1 ]
