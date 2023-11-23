@@ -51,7 +51,7 @@
 #               'ppm> search DBI; ppm> install DBI'.
 # Created: Tue Apr 16 13:38:56 MDT 2013
 # Rev: 
-#          0.16.01 Added check for unpaid lost bills.
+#          0.16.02 Sent spurious STDERR from tools to /dev/null.
 #
 ##################################################################################################
 
@@ -63,7 +63,7 @@ use DBI;
 
 # Renamed variables and file names for completed item customer and incomplete item customers lists
 # in accordance with notify_customers.sh.
-my $VERSION                = qq{0.16.01};
+my $VERSION                = qq{0.16.02};
 my $DB_FILE                = "avincomplete.db";
 my $DSN                    = "dbi:SQLite:dbname=$DB_FILE";
 my $USER                   = "";
@@ -547,12 +547,12 @@ sub placeHoldForItem( $ )
 		print "\n\n\n Branch card: '$branchCard' \n\n\n";
 		# Does a hold exist for this item on this card? If there is no hold it will return nothing.
 		# echo ABB-AVINCOMPLETE | seluser -iB | selhold -iU -oI | selitem -iI -oB | grep $itemId # will output all the ids 
-		my $hold = `echo "$branchCard|" | ssh "$ILS_HOST" 'cat - | seluser -iB | selhold -iU -jACTIVE -oI | selitem -iI -oB | grep $itemId'`; # will output all the ids 
+		my $hold = `echo "$branchCard|" | ssh "$ILS_HOST" 'cat - | seluser -iB 2>/dev/null | selhold -iU -jACTIVE -oI 2>/dev/null | selitem -iI -oB 2>/dev/null | grep $itemId' 2>/dev/null`; # will output all the ids 
 		if ( $hold eq '' )
 		{
 			if ( $branch ne '' )
 			{
-				`echo "$itemId|" | ssh "$ILS_HOST" 'cat - | createholds.pl -l"EPL$branch" -B"$branchCard" -Ue'`;
+				`echo "$itemId|" | ssh "$ILS_HOST" 'cat - | createholds.pl -l"EPL$branch" -B"$branchCard" -Ue' 2>/dev/null `;
 				logit( "Ok: copy hold place on item '$itemId' for '$branchCard'." );
 			}
 			else # Couldn't find the branch for this avsnag card.
@@ -615,7 +615,7 @@ END_SQL
 sub isCheckedOutToCustomer( $ )
 {
 	my $itemId = shift;
-	my $profileCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIm | selcharge -iI -tACTIVE -oUS | seluser -iU -oSBp'`;
+	my $profileCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIm 2>/dev/null | selcharge -iI -tACTIVE -oUS 2>/dev/null | seluser -iU -oSBp 2>/dev/null' 2>/dev/null`;
 	# On success: 'CHECKEDOUT|21221022896929|EPL_ADULT|' on fail: ''
 	# test if the profile can be found in the list of customer profiles AND is checked out.
 	return 1 if ( $profileCheck =~ m/CHECKEDOUT/ && grep( /($profileCheck)/, @CUSTOMER_PROFILES ) );
@@ -629,7 +629,7 @@ sub isCheckedOutToCustomer( $ )
 sub isCheckedOutToSystemCard( $ )
 {
 	my $itemId = shift;
-	my $profileCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIm | selcharge -iI -tACTIVE -oUS | seluser -iU -oSBp'`;
+	my $profileCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIm 2>/dev/null | selcharge -iI -tACTIVE -oUS 2>/dev/null | seluser -iU -oSBp 2>/dev/null' 2>/dev/null`;
 	# On success: 'CHECKEDOUT|CLV-AVINCOMPLETE|EPL_AVSNAG|' on fail: '' if not checked out.
 	# test if the profile can be found in the list of customer profiles AND is checked out.
 	return 1 if ( $profileCheck =~ m/CHECKEDOUT/ && grep( /($profileCheck)/, @SYSTEM_PROFILES ) );
@@ -643,7 +643,7 @@ sub isCheckedOutToSystemCard( $ )
 sub isCheckedOut( $ )
 {
 	my $itemId = shift;
-	my $locationCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -om'`;
+	my $locationCheck = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -om 2>/dev/null' 2>/dev/null`;
 	# On success: 'CHECKEDOUT|' on fail: ''
 	return 1 if ( $locationCheck =~ m/CHECKEDOUT/ );
 	return 0;
@@ -658,7 +658,7 @@ sub updateCurrentUser( $ )
 	my $itemId = shift;
 	# UPDATE avincomplete SET Title=?, UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
 	# WHERE ItemId=?
-	my $sqlAPI = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oI | selcharge -iI -tACTIVE -oU | seluser -iU -oUBDX.9026.X.9007.'`;
+	my $sqlAPI = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oI 2>/dev/null | selcharge -iI -tACTIVE -oU 2>/dev/null | seluser -iU -oUBDX.9026.X.9007. 2>/dev/null' 2>/dev/null`;
 	# returns: '564906|21221012345678|V, Brooke|780-xxx-xxxx|xxxxxxxx@hotmail.com|'
 	# but we need:
 	#31221098551174|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
@@ -678,7 +678,7 @@ sub updatePreviousUser( $ )
 	# UPDATE avincomplete SET Title=?, UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
 	# WHERE ItemId=?
 	########################## TODO finish finding the previous user.
-	my $sqlAPI = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -os | seluser -iU -oUBDX.9026.X.9007.'`;
+	my $sqlAPI = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -os 2>/dev/null | seluser -iU -oUBDX.9026.X.9007. 2>/dev/null' 2>/dev/null`;
 	# returns: '871426|21221021008682|W, T|780-644-nnnn|email@foo.bar|'
 	# but we need:
 	#31221098551174|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
@@ -694,7 +694,7 @@ sub updatePreviousUser( $ )
 sub isInILS( $ )
 {
 	my $itemId = shift;
-	my $returnString = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB'`;
+	my $returnString = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB 2>/dev/null' 2>/dev/null`;
 	return 1 if ( $returnString =~ m/\d+/ );
 	return 0;
 }
@@ -707,7 +707,7 @@ sub updateTitle( $ )
 	my $itemId = shift;
 	# UPDATE avincomplete SET Title=?, UserKey=?, UserId=?, UserName=?, UserPhone=?, UserEmail=?, Processed=?, ProcessDate=? 
 	# WHERE ItemId=?
-	my $sqlAPI = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oC | selcatalog -iC -ot'`;
+	my $sqlAPI = `echo "$itemId|" | ssh "$ILS_HOST" 'cat - | selitem -iB -oC 2>/dev/null | selcatalog -iC -ot 2>/dev/null' 2>/dev/null`;
 	#31221098551174|(Item not found in ILS)|301585|21221012345678|Billy, Balzac|780-496-5108|ilsteam@epl.ca|
 	chomp( $sqlAPI );
 	$sqlAPI = $itemId . "|" . $sqlAPI . "0|0|Unknown|0|none|";
@@ -780,7 +780,7 @@ sub checkOutItemToAVSnag( $ )
 		print "\n Branch SNAG card: '$branchCard' \n";
 		if ( $branch ne '' )
 		{
-			`echo "$itemId|" | ssh "$ILS_HOST" 'cat - | chargeitems.pl -b -u"$branchCard" -U'`;
+			`echo "$itemId|" | ssh "$ILS_HOST" 'cat - | chargeitems.pl -b -u"$branchCard" -U' 2>/dev/null`;
 			logit( "Ok: item '$itemId' checked out to '$branchCard'." );
 		}
 		else # Couldn't find the branch for this avsnag card.
@@ -809,7 +809,7 @@ sub cancelHolds( $ )
 		logit( "\n Checking and removing holds for '$branchCard'." );
 		# Here we just instruct the script to remove the hold for the item. The script will not remove holds
 		# on items if the user doesn't have a hold.
-		`echo "$itemId|" | ssh "$ILS_HOST" 'cat - | cancelholds.pl -B"$branchCard" -U'`;
+		`echo "$itemId|" | ssh "$ILS_HOST" 'cat - | cancelholds.pl -B"$branchCard" -U' 2>/dev/null`;
 		logit( "Ok: any holds for item '$itemId' removed from '$branchCard'." );
 	}
 }
@@ -864,7 +864,7 @@ sub testDifferentUserChargedItemComplete()
 	my $charge_new_users = create_tmp_file( "avi_diff_users_00", $results );
 	# 31221113625110|21221021719742
 	# This won't find things where the item isn't charged, or the charge is inactive.
-	$results = `cat $charge_new_users | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIBS | selcharge -iI -tACTIVE -oUS | seluser -iU -oSB'`;
+	$results = `cat $charge_new_users | "$PIPE" -P | ssh "$ILS_HOST" 'cat - | selitem -iB -oIBS 2>/dev/null | selcharge -iI -tACTIVE -oUS 2>/dev/null | seluser -iU -oSB 2>/dev/null' 2>/dev/null`;
 	# 31221075400577  |21221021821068|29335004649924|
 	# 31221078713059  |21221024249002|LHL-AVINCOMPLETE|
 	# or 
@@ -921,7 +921,7 @@ sub reportItem( $ )
 	# 31221216060256|21221025388387|2018-01-09|LHL|Nathan for you. Season one [videorecording]|case missing
 	#            31221216060256, 21221025388387, 2018-01-09, LHL, Nathan for you. Season o, case missing
 	logit( "AVI reports: $avi_result" );
-	my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIBlmyt | selcharge -iI -oUtS | seluser -iU -oSB' 2>/dev/null`;
+	my $ils_results = `echo "$itemId" | ssh "$ILS_HOST" 'cat - | selitem -iB -oIBlmyt 2>/dev/null | selcharge -iI -oUtS 2>/dev/null | seluser -iU -oSB 2>/dev/null' 2>/dev/null`;
 	$ils_results = `echo "$ils_results" | "$PIPE" -tc0 -h', ' -H`;
 	logit( "ILS reports: $ils_results" );
 }
@@ -1068,9 +1068,9 @@ sub init
 				chomp $stationLibrary;
 				$stationLibrary = 'EPL' . $stationLibrary;
 				# Add station library to discharge -s"EPLWHP"
-				`echo "$itemId" | ssh "$ILS_HOST" 'cat - | dischargeitem.pl -U -s"$stationLibrary"'`;
+				`echo "$itemId" | ssh "$ILS_HOST" 'cat - | dischargeitem.pl -U -s"$stationLibrary"' 2>/dev/null`;
 				logit( "charging $itemId, to $branchDiscardCard.\n waiting for dischargeitem.pl to complete." );
-				`echo "$itemId" | ssh "$ILS_HOST" 'cat - | chargeitems.pl -b -u"$branchDiscardCard" -U'`;
+				`echo "$itemId" | ssh "$ILS_HOST" 'cat - | chargeitems.pl -b -u"$branchDiscardCard" -U' 2>/dev/null`;
 			}
 			# and no matter what, record what you are about to remove from AVI.
 			`echo 'SELECT * FROM avincomplete WHERE ItemId=$itemId AND Discard=1;' | sqlite3 $DB_FILE >>discard.log 2>&1`;
@@ -1135,7 +1135,7 @@ sub init
 	if ( $opt{'U'} )
 	{
 		# Find all the AV Snag cards in the system, then iterate over them to find all the items charged.
-		my $selectSnagCards = `ssh "$ILS_HOST" 'seluser -p"EPL_AVSNAG" -oUB'`;
+		my $selectSnagCards = `ssh "$ILS_HOST" 'seluser -p"EPL_AVSNAG" -oUB 2>/dev/null' 2>/dev/null`;
 		# Looks like: '604887|WMC-AVINCOMPLETE|'
 		my @data = split '\n', $selectSnagCards;
 		while (@data)
@@ -1150,7 +1150,7 @@ sub init
 			# Later we must include the library code whenever we insert a new item so get it now.
 			my $libCode = getLibraryCode( $userKeyUserId );
 			# Now find all the charges for this card. The output looks like this: '31221104409748  |'
-			my $selectCardCharges = `echo "$userKeyUserId" | ssh "$ILS_HOST" 'cat - | selcharge -iU -tACTIVE -oIS | selitem -iI -oB'`;
+			my $selectCardCharges = `echo "$userKeyUserId" | ssh "$ILS_HOST" 'cat - | selcharge -iU -tACTIVE -oIS 2>/dev/null | selitem -iI -oB 2>/dev/null' 2>/dev/null`;
 			my @itemList = split '\n', $selectCardCharges;
 			while ( @itemList )
 			{
@@ -1179,7 +1179,7 @@ sub init
 	# Create table of system cards for holds and checkouts.
 	if ( $opt{'c'} ) 
 	{
-		my $apiResults = `ssh "$ILS_HOST" 'seluser -p"EPL_AVSNAG" -oUB'`;
+		my $apiResults = `ssh "$ILS_HOST" 'seluser -p"EPL_AVSNAG" -oUB 2>/dev/null' 2>/dev/null`;
 		# which produces:
 		# ...
 		# 836641|DLI-SNAGS|
@@ -1321,7 +1321,7 @@ END_SQL
 		## Process items in the AVI database, remove items that have been marked LOST-ASSUM, etc. See @NON_AVI_LOCATIONS.
 		$results = `echo 'SELECT ItemId FROM avincomplete WHERE Complete=0 AND UserId NOT NULL;' | sqlite3 $DB_FILE`;
 		my $itemIdFile = create_tmp_file( "avi_l_00", $results );
-		$results = `cat "$itemIdFile" | ssh "$ILS_HOST" 'cat - | selitem -iB -oBm'`;
+		$results = `cat "$itemIdFile" | ssh "$ILS_HOST" 'cat - | selitem -iB -oBm 2>/dev/null' 2>/dev/null`;
 		$itemIdFile = create_tmp_file( "avi_l_01", $results );
 		$results = `cat "$itemIdFile" | "$PIPE" -t'c0'`;
 		$itemIdFile = create_tmp_file( "avi_l_02", $results );
@@ -1447,7 +1447,7 @@ END_SQL
 		$results = `cat "$branchSnagCards" | "$PIPE" -dc0`;
 		my $branches = create_tmp_file( "avi_e_uniqsnagcards", $results );
 		# Now we need to work on dates; select all records older than 'n' days ago.
-		$dateAgo = `ssh "$ILS_HOST" 'transdate -d-$daysAgo'`;
+		$dateAgo = `ssh "$ILS_HOST" 'transdate -d-$daysAgo 2>/dev/null' 2>/dev/null`;
 		$dateAgo = `echo "$dateAgo" | "$PIPE" -m'c0:####-##-##'`;
 		chomp $dateAgo;
 		# Now output the list of items based on branch.
