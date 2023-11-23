@@ -22,28 +22,25 @@
 # Author:  Andrew Nisbet, Edmonton Public Library
 # Dependencies: clean.pl
 # Version:
-#   0.3 - Fix bug that isn't cleaning up old logs. Moving to one 
-#         tarchive and into a backup directory.
-#   0.2 - Added clean up if backup successful.
-#   0.1 - added save of discard.log
+#   0.4 Changed names of logs, and clean schedule.
 #
 #################################################################
 WORK_DIR=/home/ilsdev/projects/avincomplete/db
-cd $WORK_DIR
-logfile=$WORK_DIR/load.log
-if [ ! -f $logfile ]; then
-  echo "log $logfile file not found"
+APP=$(basename -s .sh "$0")
+LOG="$WORK_DIR/$APP.log"
+if [ ! -f "$LOG" ]; then
+  echo "log $LOG file not found"
   exit 1
 fi
-timestamp=`date +%Y%m%d`
+timestamp=$(date +%Y%m%d)
 # backup database and complete.log
-tar cvfz avincomplete.$timestamp.tgz avincomplete.db complete.log discard.log $logfile
-cat /dev/null > $logfile
+tar cvfz "avincomplete.$timestamp.tgz" avincomplete.db marknotify.log notification.log load_avincomplete.log "$LOG"
+echo > "$LOG"
 ### Keep the number of old log files down to 10.
-if [ -s avincomplete.$timestamp.tgz ]
+if [ -s "avincomplete.$timestamp.tgz" ]
 then
-	/usr/local/bin/clean.pl -t"avincomplete.201*" -v -u
+	/usr/local/bin/clean.pl -t"avincomplete.202*" -v -u
 else
-	echo "*** WARNING **** couldn't clean up the avincomplete.201... files because the last backup failed!"
+	echo "*** WARNING **** couldn't clean up the avincomplete.202... files because the last backup failed!"
 fi
 #EOF
