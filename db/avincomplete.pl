@@ -1228,7 +1228,7 @@ END_SQL
 			$DBH->do($SQL, undef, $userKey, $userId, $branch );
 		}
 		$DBH->disconnect();
-		logit("finished updating avsnag cards table.");
+		logit("done.");
 	} # end of if '-c' processing.
 	# Set the default discard system card.
 	if ( $opt{'d'} ) 
