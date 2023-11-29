@@ -46,7 +46,6 @@
 			<option value='WHP'>WHP</option>
 			<option value='WMC'>WMC</option>
 			<option value='WOO'>WOO</option>
-			<option value='ALL'>ALL</option>
 		</select>
 		<br>
 		<label for="item_id" class="sr-only">Bar code</label>
@@ -66,16 +65,6 @@
 $(document).ready(function(){
     $('input').on('click focusin', function() {
 		this.value = '';
-	});
-	$('#sel1').change(function() {
-		if( $(this).val() == "ALL") {
-			// Disable the barcode field
-			$('#barcode').prop( "disabled", true );
-			// And clear the text field in case there is anything already entered before the user changed the library.
-			$('#barcode').val( "" );
-		} else {       
-			$('#barcode').prop( "disabled", false );
-		}
 	});
 });
 

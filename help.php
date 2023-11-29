@@ -28,7 +28,6 @@
 	  <ul class="nav navbar-nav navbar-right">
 		<li><a href="https://staffweb.epl.ca/"><img src="https://avatars2.githubusercontent.com/u/4293855?v=3&s=20"/></a></li>
 		<li><a href='index.php'>Home</a></li>
-		<li><a href='branch_items.php?branch=ALL'>All Incomplete Items</a></li>
 		<li><a href='help.php'>Help</a></li>
 	  </ul>
 	  <form class="navbar-form navbar-right">

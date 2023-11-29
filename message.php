@@ -27,7 +27,6 @@
 	<div id="navbar" class="navbar-collapse collapse">
 	  <ul class="nav navbar-nav navbar-right">
 		<li><a href='index.php'>Home</a></li>
-		<li><a href='branch_items.php?branch=ALL'>All Incomplete Item</a></li>
 		<li><a href='help.php'>Help</a></li>
 	  </ul>
 	</div>
